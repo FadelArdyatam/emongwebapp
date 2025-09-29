@@ -1,0 +1,3850 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Orang Tua - Emotion Detection</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow-x: hidden;
+            color: #334155;
+        }
+
+        .sidebar {
+            background: linear-gradient(180deg, #fb923c 0%, #ea580c 100%);
+            min-height: 100vh;
+            color: white;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 280px;
+            z-index: 1000;
+            box-shadow: 4px 0 15px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+            transform: translateX(-100%);
+        }
+
+        .sidebar.show {
+            transform: translateX(0);
+        }
+
+        .sidebar-header {
+            padding: 2rem 1.5rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(234, 88, 12, 0.7);
+            position: relative;
+        }
+
+        .sidebar-close {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            color: white;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .sidebar-close:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(1.1);
+        }
+
+        .sidebar-toggle {
+            position: fixed;
+            top: 1rem;
+            left: 1rem;
+            z-index: 1001;
+            background: #fb923c;
+            border: none;
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(251, 146, 60, 0.3);
+        }
+
+        .sidebar-toggle:hover {
+            background: #ea580c;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(251, 146, 60, 0.4);
+        }
+
+        .sidebar-header h4 {
+            font-size: 1.3rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            color: white;
+        }
+
+        .sidebar-header p {
+            font-size: 0.85rem;
+            color: #fef3c7;
+            margin: 0;
+        }
+
+        .sidebar .nav {
+            padding: 1rem 0;
+        }
+
+        .sidebar .nav-link {
+            color: #fef3c7;
+            padding: 16px 24px;
+            border-radius: 0;
+            margin: 0;
+            transition: all 0.3s ease;
+            border-left: 4px solid transparent;
+            font-size: 0.95rem;
+            font-weight: 500;
+            position: relative;
+        }
+
+        .sidebar .nav-link:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            border-left-color: #fef3c7;
+            padding-left: 32px;
+        }
+
+        .sidebar .nav-link.active {
+            background: rgba(255, 255, 255, 0.15);
+            color: white;
+            border-left-color: #fef3c7;
+            font-weight: 600;
+        }
+
+        .sidebar .nav-link i {
+            width: 20px;
+            margin-right: 12px;
+        }
+
+        .main-content {
+            margin-left: 0;
+            padding: 2rem;
+            min-height: 100vh;
+            transition: margin-left 0.3s ease;
+            width: 100%;
+        }
+
+        .main-content.sidebar-open {
+            margin-left: 280px;
+            width: calc(100% - 280px);
+        }
+
+        .header-card {
+            background: white;
+            border-radius: 20px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+            border: 1px solid rgba(251, 146, 60, 0.1);
+        }
+
+        .page-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #0f172a;
+            margin: 0;
+        }
+
+        .welcome-text {
+            color: #64748b;
+            font-size: 1rem;
+            margin: 0;
+        }
+
+        .user-info {
+            background: rgba(251, 146, 60, 0.1);
+            border: 1px solid rgba(251, 146, 60, 0.2);
+            border-radius: 16px;
+            padding: 16px 20px;
+            color: #9a3412;
+            font-weight: 600;
+        }
+
+        .card {
+            border: none;
+            border-radius: 20px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+            transition: all 0.3s ease;
+            background: white;
+            border: 1px solid rgba(251, 146, 60, 0.05);
+            overflow: hidden;
+        }
+
+        .card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+        }
+
+        .card-header {
+            background: linear-gradient(90deg, #fef3c7 0%, #fed7aa 100%);
+            border-bottom: 1px solid #fed7aa;
+            padding: 1.5rem;
+            border-radius: 20px 20px 0 0 !important;
+        }
+
+        .card-header h5 {
+            margin: 0;
+            font-weight: 700;
+            color: #0f172a;
+            font-size: 1.1rem;
+        }
+
+        .card-body {
+            padding: 1.5rem;
+        }
+
+        .stat-card {
+            background: white;
+            border: 2px solid transparent;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            border-radius: 20px 20px 0 0;
+        }
+
+        .stat-card:nth-child(1)::before { background: #fb923c; }
+        .stat-card:nth-child(2)::before { background: #22c55e; }
+        .stat-card:nth-child(3)::before { background: #3b82f6; }
+        .stat-card:nth-child(4)::before { background: #8b5cf6; }
+
+        .stat-card .card-body {
+            text-align: center;
+            padding: 2rem 1.5rem;
+        }
+
+        .stat-card i {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .stat-card:nth-child(1) i { color: #fb923c; }
+        .stat-card:nth-child(2) i { color: #22c55e; }
+        .stat-card:nth-child(3) i { color: #3b82f6; }
+        .stat-card:nth-child(4) i { color: #8b5cf6; }
+
+        .stat-card h3 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            margin-bottom: 0.5rem;
+            color: #0f172a;
+        }
+
+        .stat-card p {
+            color: #64748b;
+            font-weight: 600;
+            margin: 0;
+            font-size: 0.9rem;
+        }
+
+        .child-card {
+            background: linear-gradient(135deg, #fb923c, #ea580c);
+            color: white;
+            border-radius: 20px;
+            padding: 2rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 8px 25px rgba(251, 146, 60, 0.3);
+            transition: all 0.3s ease;
+        }
+
+        .child-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 35px rgba(251, 146, 60, 0.4);
+        }
+
+        /* Loading overlay for sections */
+        .section-loading {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(2px);
+            z-index: 10;
+            border-radius: 16px;
+            font-weight: 600;
+            color: #0f172a;
+        }
+
+        .emotion-badge {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin: 2px;
+        }
+
+        .emotion-happy { background-color: #22c55e; color: white; }
+        .emotion-sad { background-color: #3b82f6; color: white; }
+        .emotion-angry { background-color: #ef4444; color: white; }
+        .emotion-fear { background-color: #8b5cf6; color: white; }
+        .emotion-surprise { background-color: #fb923c; color: white; }
+        .emotion-disgust { background-color: #6b7280; color: white; }
+        .emotion-neutral { background-color: #94a3b8; color: white; }
+
+        .timeline-item {
+            border-left: 3px solid #fb923c;
+            padding-left: 20px;
+            margin-bottom: 20px;
+            position: relative;
+        }
+
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -6px;
+            top: 0;
+            width: 10px;
+            height: 10px;
+            background-color: #fb923c;
+            border-radius: 50%;
+        }
+
+        .btn {
+            border-radius: 12px;
+            font-weight: 600;
+            padding: 12px 24px;
+            transition: all 0.3s ease;
+            border: none;
+            font-size: 0.9rem;
+        }
+
+        .btn-primary {
+            background: #fb923c;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #ea580c;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(251, 146, 60, 0.3);
+        }
+
+        .btn-success {
+            background: #22c55e;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #16a34a;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(34, 197, 94, 0.3);
+        }
+
+        .btn-outline-primary {
+            border: 2px solid #fb923c;
+            color: #fb923c;
+        }
+
+        .btn-outline-primary:hover {
+            background: #fb923c;
+            border-color: #fb923c;
+            color: white;
+        }
+
+        .btn-outline-success {
+            border: 2px solid #22c55e;
+            color: #22c55e;
+        }
+
+        .btn-outline-success:hover {
+            background: #22c55e;
+            border-color: #22c55e;
+            color: white;
+        }
+
+        .form-control, .form-select {
+            border-radius: 12px;
+            border: 2px solid #fed7aa;
+            padding: 12px 16px;
+            transition: all 0.3s ease;
+            background: #fef3c7;
+        }
+
+        .form-control:focus, .form-select:focus {
+            border-color: #fb923c;
+            box-shadow: 0 0 0 4px rgba(251, 146, 60, 0.1);
+            background: white;
+        }
+
+        .form-label {
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 0.5rem;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin-top: 1rem;
+            width: 100%;
+            overflow-x: auto;
+        }
+
+        .alert {
+            border-radius: 16px;
+            border: none;
+            padding: 16px 20px;
+            font-weight: 500;
+        }
+
+        .alert-info {
+            background: rgba(59, 130, 246, 0.1);
+            color: #1e40af;
+            border-left: 4px solid #3b82f6;
+        }
+
+        .alert-warning {
+            background: rgba(251, 146, 60, 0.1);
+            color: #9a3412;
+            border-left: 4px solid #fb923c;
+        }
+
+        .floating-elements {
+            position: fixed;
+            top: 0;
+            left: 280px;
+            right: 0;
+            bottom: 0;
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        .float-shape {
+            position: absolute;
+            opacity: 0.03;
+            animation: float 8s ease-in-out infinite;
+        }
+
+        .float-shape:nth-child(1) {
+            top: 10%;
+            right: 10%;
+            width: 120px;
+            height: 120px;
+            background: #fb923c;
+            border-radius: 50%;
+            animation-delay: 0s;
+        }
+
+        .float-shape:nth-child(2) {
+            bottom: 20%;
+            right: 20%;
+            width: 80px;
+            height: 80px;
+            background: #22c55e;
+            border-radius: 30%;
+            animation-delay: 3s;
+        }
+
+        .float-shape:nth-child(3) {
+            top: 50%;
+            right: 5%;
+            width: 100px;
+            height: 100px;
+            background: #3b82f6;
+            border-radius: 20%;
+            animation-delay: 6s;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-30px) rotate(180deg); }
+        }
+
+        /* Mobile Responsiveness */
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 80%;
+                max-width: 320px;
+                box-shadow: 8px 0 24px rgba(0,0,0,0.25);
+            }
+            .main-content {
+                padding: 1rem;
+            }
+            .main-content.sidebar-open {
+                margin-left: 0;
+                width: 100%;
+            }
+            .floating-elements { left: 0; }
+            .header-card { padding: 1.25rem; }
+            .page-title { font-size: 1.35rem; }
+            .stat-card h3 { font-size: 1.75rem; }
+            .d-flex.flex-wrap > * { max-width: 100%; }
+        }
+
+        /* Animation for cards entering view */
+        .card {
+            animation: slideUp 0.6s ease-out;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Staggered animation for stat cards */
+        .stat-card:nth-child(1) { animation-delay: 0.1s; }
+        .stat-card:nth-child(2) { animation-delay: 0.2s; }
+        .stat-card:nth-child(3) { animation-delay: 0.3s; }
+        .stat-card:nth-child(4) { animation-delay: 0.4s; }
+        
+        /* New color improvements */
+        .section {
+            display: none;
+        }
+        
+        #homeSection {
+            display: block;
+        }
+        
+        .notification-item {
+            padding: 10px 0;
+            border-bottom: 1px solid #f1f5f9;
+        }
+        
+        .notification-item:last-child {
+            border-bottom: none;
+        }
+        
+        .notification-item i {
+            margin-right: 10px;
+            color: #fb923c;
+        }
+        
+        .notification-date {
+            font-size: 0.8rem;
+            color: #64748b;
+        }
+
+        /* Session Detail Sidebar for Parents */
+        .session-detail-sidebar {
+            position: fixed;
+            top: 0;
+            right: 0;
+            width: 350px;
+            height: 100vh;
+            background: #f8fafc;
+            border-left: 1px solid #e2e8f0;
+            z-index: 1000;
+            transform: translateX(100%);
+            transition: transform 0.3s ease;
+            overflow-y: auto;
+        }
+
+        .session-detail-sidebar.show {
+            transform: translateX(0);
+        }
+
+        .session-detail-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            width: 50px;
+            height: 50px;
+            background: #22c55e;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            font-size: 1.2rem;
+            cursor: pointer;
+            z-index: 999;
+            box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
+            transition: all 0.3s ease;
+        }
+
+        .session-detail-toggle:hover {
+            background: #16a34a;
+            transform: scale(1.1);
+        }
+
+        .session-detail-header {
+            background: white;
+            padding: 1.5rem;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .session-detail-close {
+            background: none;
+            border: none;
+            font-size: 1.2rem;
+            color: #64748b;
+            cursor: pointer;
+            padding: 0.5rem;
+            border-radius: 6px;
+            transition: all 0.3s ease;
+        }
+
+        .session-detail-close:hover {
+            background: #e2e8f0;
+            color: #1e293b;
+            transform: scale(1.1);
+        }
+
+        .session-detail-header h5 {
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin: 0;
+            color: #1e293b;
+        }
+
+        .session-detail-content {
+            padding: 1.5rem;
+            height: calc(100vh - 80px);
+            overflow-y: auto;
+        }
+
+        .session-info-card,
+        .session-stats-card,
+        .emotion-breakdown-card,
+        .child-activity-card,
+        .recent-detections-card {
+            background: white;
+            border-radius: 12px;
+            padding: 1.25rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            border: 1px solid #f1f5f9;
+        }
+
+        .session-info-card h6,
+        .session-stats-card h6,
+        .emotion-breakdown-card h6,
+        .child-activity-card h6,
+        .recent-detections-card h6 {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 0.75rem;
+        }
+
+        .session-status {
+            font-size: 0.85rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .session-status.active {
+            color: #22c55e;
+            font-weight: 600;
+        }
+
+        .session-status.completed {
+            color: #64748b;
+            font-weight: 600;
+        }
+
+        .session-time {
+            font-size: 0.8rem;
+            color: #64748b;
+            margin: 0;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        .stat-item {
+            text-align: center;
+            padding: 0.75rem;
+            background: #f8fafc;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .stat-value {
+            display: block;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #22c55e;
+            margin-bottom: 0.25rem;
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
+            color: #64748b;
+            font-weight: 500;
+        }
+
+        .emotion-list,
+        .activity-list,
+        .detections-list {
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .emotion-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .emotion-item:last-child {
+            border-bottom: none;
+        }
+
+        .emotion-name {
+            font-weight: 600;
+            color: #1e293b;
+        }
+
+        .emotion-count {
+            background: #22c55e;
+            color: white;
+            padding: 0.25rem 0.5rem;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .activity-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .activity-item:last-child {
+            border-bottom: none;
+        }
+
+        .activity-info {
+            flex: 1;
+        }
+
+        .activity-description {
+            font-weight: 600;
+            color: #1e293b;
+            font-size: 0.9rem;
+        }
+
+        .activity-time {
+            font-size: 0.75rem;
+            color: #64748b;
+        }
+
+        .detection-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .detection-item:last-child {
+            border-bottom: none;
+        }
+
+        .detection-info {
+            flex: 1;
+        }
+
+        .detection-emotion {
+            font-weight: 600;
+            color: #1e293b;
+            font-size: 0.85rem;
+        }
+
+        .detection-time {
+            font-size: 0.7rem;
+            color: #94a3b8;
+        }
+
+        .emotion-badge {
+            padding: 0.25rem 0.5rem;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .emotion-badge.happy { background: #dcfce7; color: #166534; }
+        .emotion-badge.sad { background: #dbeafe; color: #1e40af; }
+        .emotion-badge.angry { background: #fef2f2; color: #dc2626; }
+        .emotion-badge.fear { background: #f3e8ff; color: #7c3aed; }
+        .emotion-badge.surprise { background: #fef3c7; color: #d97706; }
+        .emotion-badge.disgust { background: #f0fdf4; color: #16a34a; }
+        .emotion-badge.neutral { background: #f1f5f9; color: #475569; }
+
+        /* Pagination Styles */
+        .pagination {
+            margin: 0;
+        }
+
+        .pagination .page-link {
+            border: 1px solid #e2e8f0;
+            color: #64748b;
+            padding: 0.5rem 0.75rem;
+            font-size: 0.875rem;
+            background: white;
+            transition: all 0.2s ease;
+        }
+
+        .pagination .page-link:hover {
+            background: #f8fafc;
+            border-color: #22c55e;
+            color: #22c55e;
+        }
+
+        .pagination .page-item.disabled .page-link {
+            background: #f1f5f9;
+            border-color: #e2e8f0;
+            color: #94a3b8;
+            cursor: not-allowed;
+        }
+
+        .pagination .page-item.active .page-link {
+            background: #22c55e;
+            border-color: #22c55e;
+            color: white;
+        }
+
+        .pagination-info {
+            font-size: 0.875rem;
+            color: #64748b;
+        }
+
+        /* Confidence Panel Styles */
+        .confidence-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding: 0.75rem;
+            background: #f8fafc;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .emotion-label {
+            font-weight: 600;
+            color: #1e293b;
+            min-width: 80px;
+            text-transform: capitalize;
+        }
+
+        .confidence-bar {
+            flex: 1;
+            height: 8px;
+            background: #e2e8f0;
+            border-radius: 4px;
+            margin: 0 1rem;
+            overflow: hidden;
+        }
+
+        .confidence-fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.3s ease;
+        }
+
+        .confidence-fill.high {
+            background: linear-gradient(90deg, #22c55e, #16a34a);
+        }
+
+        .confidence-fill.medium {
+            background: linear-gradient(90deg, #f59e0b, #d97706);
+        }
+
+        .confidence-fill.low {
+            background: linear-gradient(90deg, #ef4444, #dc2626);
+        }
+
+        .confidence-text {
+            font-weight: 600;
+            color: #1e293b;
+            min-width: 50px;
+            text-align: right;
+        }
+
+        .current-emotion-display {
+            text-align: center;
+            padding: 1.5rem;
+        }
+
+        .current-emotion-display h3 {
+            color: #1e293b;
+            margin-bottom: 1rem;
+            font-size: 1.5rem;
+        }
+
+        .confidence-info {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 1rem;
+        }
+
+        .confidence-info span {
+            background: #f1f5f9;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            font-weight: 600;
+            color: #475569;
+        }
+
+        /* Real-time notification styles */
+        .realtime-notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 1rem;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            z-index: 1050;
+            max-width: 300px;
+            animation: slideInRight 0.3s ease;
+        }
+
+        @keyframes slideInRight {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .realtime-notification .notification-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .realtime-notification .notification-icon {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 0.5rem;
+            font-size: 0.875rem;
+        }
+
+        .realtime-notification .notification-icon.emotion {
+            background: #22c55e;
+            color: white;
+        }
+
+        .realtime-notification .notification-icon.activity {
+            background: #3b82f6;
+            color: white;
+        }
+
+        .realtime-notification .notification-icon.session {
+            background: #f59e0b;
+            color: white;
+        }
+
+        /* Child Sessions List */
+        .child-sessions-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1rem;
+        }
+
+        .child-session-item {
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 1.25rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .child-session-item:hover {
+            border-color: #22c55e;
+            box-shadow: 0 4px 12px rgba(34, 197, 94, 0.15);
+            transform: translateY(-2px);
+        }
+
+        .child-session-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 0.75rem;
+        }
+
+        .child-session-title {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #1e293b;
+            margin: 0;
+        }
+
+        .child-session-status {
+            font-size: 0.75rem;
+            padding: 0.25rem 0.5rem;
+            border-radius: 6px;
+            font-weight: 600;
+        }
+
+        .child-session-status.active {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .child-session-status.completed {
+            background: #f1f5f9;
+            color: #475569;
+        }
+
+        .child-session-info {
+            margin-bottom: 0.75rem;
+        }
+
+        .child-session-child {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #22c55e;
+            margin-bottom: 0.25rem;
+        }
+
+        .child-session-time {
+            font-size: 0.8rem;
+            color: #64748b;
+        }
+
+        .child-session-stats {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.75rem;
+        }
+
+        .child-session-stat {
+            text-align: center;
+        }
+
+        .child-session-stat-value {
+            display: block;
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: #22c55e;
+            margin-bottom: 0.25rem;
+        }
+
+        .child-session-stat-label {
+            font-size: 0.75rem;
+            color: #64748b;
+            font-weight: 500;
+        }
+
+        .child-session-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 0.75rem;
+            padding-top: 0.75rem;
+            border-top: 1px solid #f1f5f9;
+        }
+
+        .child-session-teacher {
+            font-size: 0.8rem;
+            color: #64748b;
+        }
+
+        .child-session-btn {
+            background: #22c55e;
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .child-session-btn:hover {
+            background: #16a34a;
+            transform: translateY(-1px);
+        }
+    </style>
+</head>
+<body>
+    <!-- Floating Background Elements -->
+    <div class="floating-elements">
+        <div class="float-shape"></div>
+        <div class="float-shape"></div>
+        <div class="float-shape"></div>
+    </div>
+
+    <div class="container-fluid p-0">
+        <div class="row g-0">
+            <!-- Sidebar Toggle Button -->
+            <button class="sidebar-toggle" onclick="toggleSidebar()" id="sidebarToggle">
+                <i class="fas fa-bars"></i>
+            </button>
+
+            <!-- Sidebar -->
+            <div class="sidebar">
+                <div class="sidebar-header">
+                    <button class="sidebar-close" onclick="toggleSidebar()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                    <h4><i class="fas fa-heart me-2"></i>EMONG</h4>
+                    <p>Dashboard Orang Tua</p>
+                </div>
+                    <nav class="nav flex-column">
+                        <a class="nav-link active" href="#home" onclick="showSection('home', this)">
+                            <i class="fas fa-home"></i> Beranda
+                        </a>
+                        <a class="nav-link" href="#children" onclick="showSection('children', this)">
+                            <i class="fas fa-child"></i> Anak Saya
+                        </a>
+                        <a class="nav-link" href="#reports" onclick="showSection('reports', this)">
+                            <i class="fas fa-chart-line"></i> Laporan Emosi
+                        </a>
+                        <a class="nav-link" href="#insights" onclick="showSection('insights', this)">
+                            <i class="fas fa-lightbulb"></i> Insight & Tips
+                        </a>
+                        <a class="nav-link" href="#confidence" onclick="showSection('confidence', this)">
+                            <i class="fas fa-chart-line"></i> Kepercayaan Real-time
+                        </a>
+                        <a class="nav-link" href="#profile" onclick="showSection('profile', this)">
+                            <i class="fas fa-user"></i> Profil
+                        </a>
+                        <a class="nav-link" href="#" onclick="logout()">
+                            <i class="fas fa-sign-out-alt"></i> Logout
+                        </a>
+                    </nav>
+            </div>
+            
+            <!-- Main Content -->
+            <div class="main-content">
+                <!-- Header -->
+                <div class="header-card d-flex justify-content-between align-items-center">
+                    <div>
+                        <h2 class="page-title" id="pageTitle">Beranda</h2>
+                        <p class="welcome-text">Pantau perkembangan emosi anak Anda</p>
+                        </div>
+                    <div class="user-info">
+                        <i class="fas fa-user-circle me-2"></i>
+                        Selamat datang, <strong id="userName">Orang Tua</strong>
+                    </div>
+                </div>
+                
+                <!-- Home Section -->
+                <div id="homeSection" class="section">
+                    <div class="row mb-4">
+                        <div class="col-md-3">
+                            <div class="card stat-card">
+                                <div class="card-body text-center">
+                                    <i class="fas fa-child fa-2x mb-2"></i>
+                                    <h3 id="totalChildren">0</h3>
+                                    <p class="mb-0">Total Anak</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card stat-card">
+                                <div class="card-body text-center">
+                                    <i class="fas fa-smile fa-2x mb-2"></i>
+                                    <h3 id="avgEmotion">-</h3>
+                                    <p class="mb-0">Rata-rata Emosi</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card stat-card">
+                                <div class="card-body text-center">
+                                    <i class="fas fa-chart-line fa-2x mb-2"></i>
+                                    <h3 id="weeklySessions">0</h3>
+                                    <p class="mb-0">Deteksi Minggu Ini</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card stat-card">
+                                <div class="card-body text-center">
+                                    <i class="fas fa-calendar-alt fa-2x mb-2"></i>
+                                    <h3 id="totalSessions">0</h3>
+                                    <p class="mb-0">Total Sesi</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5><i class="fas fa-chart-pie"></i> Grafik Emosi Anak (7 Hari Terakhir)</h5>
+                                </div>
+                                <div class="card-body">
+                                    <canvas id="emotionChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5><i class="fas fa-bell"></i> Notifikasi Terbaru</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div id="notifications">
+                                        <div class="notification-item">
+                                            <i class="fas fa-info-circle"></i>
+                                            <span>Anak Anda, Rina, menunjukkan peningkatan emosi positif hari ini.</span>
+                                            <div class="notification-date">2 jam yang lalu</div>
+                                    </div>
+                                        <div class="notification-item">
+                                            <i class="fas fa-calendar-check"></i>
+                                            <span>Sesi emosi mingguan telah tersedia.</span>
+                                            <div class="notification-date">1 hari yang lalu</div>
+                                        </div>
+                                        <div class="notification-item">
+                                            <i class="fas fa-lightbulb"></i>
+                                            <span>Tips baru untuk mengelola emosi anak telah ditambahkan.</span>
+                                            <div class="notification-date">3 hari yang lalu</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Children Section -->
+                <div id="childrenSection" class="section" style="display: none;">
+                    <div class="row" id="childrenList">
+                        <!-- Children cards will be loaded here -->
+                    </div>
+                    
+                    <!-- Child Sessions List -->
+                    <div class="row mt-4">
+                        <div class="col-12">
+                            <div class="card">
+                                <div class="card-header d-flex justify-content-between align-items-center">
+                                    <h5><i class="fas fa-calendar-alt me-2" style="color: #22c55e;"></i>Sesi Anak Terbaru</h5>
+                                    <button class="btn btn-sm btn-outline-primary" onclick="loadChildSessions()">
+                                        <i class="fas fa-refresh me-1"></i>Refresh Sesi
+                                    </button>
+                                </div>
+                                <div class="card-body">
+                                    <div id="childSessionsList">
+                                        <div class="text-center py-4">
+                                            <i class="fas fa-calendar text-muted" style="font-size: 2rem;"></i>
+                                            <p class="text-muted mt-2">Klik Refresh untuk memuat sesi anak</p>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Pagination -->
+                                    <div id="sessionsPagination" class="d-flex justify-content-between align-items-center mt-3" style="display: none !important;">
+                                        <div class="pagination-info">
+                                            <small class="text-muted">
+                                                Menampilkan <span id="sessionsStart">0</span> - <span id="sessionsEnd">0</span> dari <span id="sessionsTotal">0</span> sesi
+                                            </small>
+                                        </div>
+                                        <nav aria-label="Sessions pagination">
+                                            <ul class="pagination pagination-sm mb-0">
+                                                <li class="page-item" id="sessionsPrevBtn">
+                                                    <button class="page-link" onclick="changeSessionsPage(-1)">
+                                                        <i class="fas fa-chevron-left"></i>
+                                                    </button>
+                                                </li>
+                                                <li class="page-item active" id="sessionsPageInfo">
+                                                    <span class="page-link">
+                                                        <span id="sessionsCurrentPage">1</span> / <span id="sessionsTotalPages">1</span>
+                                                    </span>
+                                                </li>
+                                                <li class="page-item" id="sessionsNextBtn">
+                                                    <button class="page-link" onclick="changeSessionsPage(1)">
+                                                        <i class="fas fa-chevron-right"></i>
+                                                    </button>
+                                                </li>
+                                            </ul>
+                                        </nav>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Reports Section -->
+                <div id="reportsSection" class="section" style="display: none;">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <select class="form-control" id="childSelect">
+                                <option value="">Pilih anak...</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <select class="form-control" id="periodSelect">
+                                <option value="1">1 Hari Terakhir</option>
+                                <option value="7">7 Hari Terakhir</option>
+                                <option value="30">30 Hari Terakhir</option>
+                                <option value="90">3 Bulan Terakhir</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <button id="loadReportsBtn" class="btn btn-success" onclick="loadReports()">
+                                <i class="fas fa-refresh"></i> Muat Laporan
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5><i class="fas fa-chart-line"></i> Timeline Emosi</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div id="emotionTimeline">
+                                        <p class="text-muted">Pilih anak dan periode untuk melihat timeline emosi</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5><i class="fas fa-download"></i> Download Laporan</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="d-grid gap-2">
+                                        <button id="downloadBtn" class="btn btn-outline-primary" onclick="downloadReport('pdf')">
+                                            <i class="fas fa-file-pdf"></i> Download PDF
+                                        </button>
+                                        <button class="btn btn-outline-success" onclick="downloadReport('excel')">
+                                            <i class="fas fa-file-excel"></i> Download Excel
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row mt-3">
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5><i class="fas fa-chart-pie"></i> Distribusi Emosi Semua Anak</h5>
+                                </div>
+                                <div class="card-body">
+                                    <canvas id="overallDistributionChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5><i class="fas fa-chart-bar"></i> Distribusi Emosi Anak Terpilih</h5>
+                                </div>
+                                <div class="card-body">
+                                    <canvas id="childDistributionChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Insights Section -->
+                <div id="insightsSection" class="section" style="display: none;">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5><i class="fas fa-lightbulb"></i> Insight & Tips untuk Anak</h5>
+                        </div>
+                        <div class="card-body">
+                            <div id="insightsContent">
+                                <div class="alert alert-info">
+                                    <h6><i class="fas fa-info-circle"></i> Tips Mengelola Emosi Anak</h6>
+                                    <ul>
+                                        <li>Beri ruang untuk anak mengekspresikan perasaannya</li>
+                                        <li>Ajarkan teknik pernapasan untuk mengatasi emosi negatif</li>
+                                        <li>Puji anak ketika mereka mengelola emosi dengan baik</li>
+                                        <li>Buat rutinitas yang konsisten untuk memberikan rasa aman</li>
+                                    </ul>
+                                </div>
+                                <div class="alert alert-warning">
+                                    <h6><i class="fas fa-exclamation-triangle"></i> Tanda-tanda Perhatian</h6>
+                                    <p>Jika anak menunjukkan emosi negatif yang berkelanjutan, pertimbangkan untuk berkonsultasi dengan guru atau profesional.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Real-time Confidence Indicators Section -->
+                <div id="confidenceSection" class="section">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header d-flex justify-content-between align-items-center">
+                                    <h5><i class="fas fa-chart-line"></i> Indikator Kepercayaan Real-time</h5>
+                                    <button class="btn btn-sm btn-outline-primary" onclick="loadConfidenceData()">
+                                        <i class="fas fa-refresh me-1"></i>Refresh
+                                    </button>
+                                </div>
+                                <div class="card-body">
+                                    <div id="confidenceIndicators">
+                                        <p class="text-muted">Menunggu data emosi...</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header d-flex justify-content-between align-items-center">
+                                    <h5><i class="fas fa-heart"></i> Emosi Saat Ini</h5>
+                                    <span class="badge bg-success" id="realtimeStatus">Real-time</span>
+                                </div>
+                                <div class="card-body">
+                                    <div id="currentEmotion">
+                                        <p class="text-muted">Tidak ada data emosi terbaru</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Profile Section -->
+                <div id="profileSection" class="section" style="display: none;">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5><i class="fas fa-user"></i> Profil Saya</h5>
+                        </div>
+                        <div class="card-body">
+                            <p>Fitur profil akan segera tersedia...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Session Detail Sidebar for Parents -->
+        <div class="session-detail-sidebar">
+            <div class="session-detail-header">
+                <h5>Detail Sesi Anak</h5>
+                <button class="session-detail-close" onclick="toggleSessionDetailSidebar()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="session-detail-content">
+                <!-- Session Basic Info -->
+                <div class="session-info-card">
+                    <h6>Informasi Sesi</h6>
+                    <div class="session-status" id="sessionDetailStatus">-</div>
+                    <p class="session-time" id="sessionDetailTime">-</p>
+                    <p class="session-time" id="sessionDetailDuration">Durasi: -</p>
+                </div>
+                
+                <!-- Session Stats -->
+                <div class="session-stats-card">
+                    <h6>Statistik Anak</h6>
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <span class="stat-value" id="totalDetections">0</span>
+                            <span class="stat-label">Total Deteksi</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-value" id="uniqueEmotions">0</span>
+                            <span class="stat-label">Jenis Emosi</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Child's Emotion Breakdown -->
+                <div class="emotion-breakdown-card">
+                    <h6>Distribusi Emosi Anak</h6>
+                    <div class="emotion-list" id="childEmotionBreakdown">
+                        <div class="text-center py-3">
+                            <i class="fas fa-chart-pie text-muted"></i>
+                            <p class="text-muted mt-2">Belum ada data emosi</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Child's Activity Timeline -->
+                <div class="child-activity-card">
+                    <h6>Aktivitas Anak</h6>
+                    <div class="activity-list" id="childActivityTimeline">
+                        <div class="text-center py-3">
+                            <i class="fas fa-clock text-muted"></i>
+                            <p class="text-muted mt-2">Belum ada aktivitas</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Recent Detections -->
+                <div class="recent-detections-card">
+                    <h6>Deteksi Terbaru</h6>
+                    <div class="detections-list" id="childRecentDetections">
+                        <div class="text-center py-3">
+                            <i class="fas fa-eye text-muted"></i>
+                            <p class="text-muted mt-2">Belum ada deteksi</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Session Detail Toggle Button -->
+        <button class="session-detail-toggle" onclick="toggleSessionDetailSidebar()">
+            <i class="fas fa-info-circle"></i>
+        </button>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script>
+        let emotionChart = null;
+        let currentUser = null;
+        let overallDistributionChart = null;
+        let childDistributionChart = null;
+        
+        // Check authentication
+        if (!localStorage.getItem('access_token')) {
+            window.location.href = '/login';
+        }
+        
+        currentUser = JSON.parse(localStorage.getItem('user'));
+        document.getElementById('userName').textContent = currentUser.full_name;
+        
+        // Initialize dashboard
+        document.addEventListener('DOMContentLoaded', function() {
+            // Show sidebar by default on desktop
+            if (window.innerWidth > 768) {
+                const sidebar = document.querySelector('.sidebar');
+                const mainContent = document.querySelector('.main-content');
+                const sidebarToggle = document.getElementById('sidebarToggle');
+                sidebar.classList.add('show');
+                mainContent.classList.add('sidebar-open');
+                sidebarToggle.style.display = 'none';
+            }
+            
+            loadDashboardData();
+            loadChildren();
+            initializeEmotionChart();
+            initializeDistributionCharts();
+            initializeRealtime();
+        });
+        
+        // Navigation
+        function showSection(section, clickedElement = null) {
+            // Hide all sections
+            document.querySelectorAll('.section').forEach(s => s.style.display = 'none');
+            document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+            
+            // Show selected section
+            const targetSection = document.getElementById(section + 'Section');
+            if (targetSection) {
+                console.log(`Showing section: ${section}Section`);
+                targetSection.style.display = 'block';
+            } else {
+                console.error(`Section ${section}Section not found`);
+            }
+
+            // Add active class to the clicked element or find by href
+            if (clickedElement && clickedElement.classList.contains('nav-link')) {
+                clickedElement.classList.add('active');
+            } else {
+                const link = document.querySelector(`.nav-link[href="#${section}"]`);
+                if (link) {
+                    link.classList.add('active');
+                }
+            }
+            
+            // Update page title
+            const titles = {
+                'home': 'Beranda',
+                'children': 'Anak Saya',
+                'reports': 'Laporan Emosi',
+                'insights': 'Insight & Tips',
+                'confidence': 'Kepercayaan Real-time',
+                'profile': 'Profil'
+            };
+            document.getElementById('pageTitle').textContent = titles[section];
+
+            // Stop any in-flight report loads when leaving reports
+            if (section !== 'reports' && _loadReportsAbort) {
+                try { _loadReportsAbort.abort(); } catch(e){}
+            }
+            
+            // Load section-specific data
+            if (section === 'confidence') {
+                // Only load if confidence section is empty or data is stale
+                const confidenceContainer = document.getElementById('confidenceIndicators');
+                if (!confidenceContainer || confidenceContainer.innerHTML.includes('Menunggu data emosi') || confidenceContainer.innerHTML.includes('Gagal memuat')) {
+                    loadConfidenceData();
+                }
+            } else if (section === 'children') {
+                loadChildren();
+            } else if (section === 'home') {
+                loadDashboardData();
+            }
+        }
+        
+        // Session Detail Sidebar Functions for Parents
+        function toggleSessionDetailSidebar() {
+            const sidebar = document.querySelector('.session-detail-sidebar');
+            sidebar.classList.toggle('show');
+        }
+        
+        async function loadParentSessionDetail(sessionId, childId) {
+            try {
+                const response = await fetch(`/api/parent/sessions/${sessionId}/detail?child_id=${childId}`, {
+                    headers: {
+                        'Authorization': 'Bearer ' + localStorage.getItem('access_token')
+                    }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    displayParentSessionDetail(data);
+                    toggleSessionDetailSidebar();
+                } else {
+                    showNotification('Gagal memuat detail sesi', 'danger');
+                }
+                
+            } catch (error) {
+                console.error('Error loading parent session detail:', error);
+                showNotification('Gagal memuat detail sesi: ' + error.message, 'danger');
+            }
+        }
+        
+        function displayParentSessionDetail(data) {
+            const session = data.session;
+            const childEmotionStats = data.child_emotion_stats;
+            const childActivity = data.child_activity;
+            const emotionLogs = data.emotion_logs;
+            
+            // Update session basic info
+            document.getElementById('sessionDetailStatus').textContent = session.status || 'Unknown';
+            document.getElementById('sessionDetailStatus').className = `session-status ${session.status}`;
+            
+            const startTime = new Date(session.start_time).toLocaleString('id-ID');
+            document.getElementById('sessionDetailTime').textContent = `Mulai: ${startTime}`;
+            
+            if (session.end_time) {
+                const endTime = new Date(session.end_time).toLocaleString('id-ID');
+                const duration = Math.round((new Date(session.end_time) - new Date(session.start_time)) / 60000);
+                document.getElementById('sessionDetailDuration').textContent = `Selesai: ${endTime} | Durasi: ${duration}m`;
+            } else {
+                document.getElementById('sessionDetailDuration').textContent = 'Sesi masih berlangsung';
+            }
+            
+            // Update stats
+            document.getElementById('totalDetections').textContent = data.total_logs || 0;
+            document.getElementById('uniqueEmotions').textContent = Object.keys(childEmotionStats || {}).length;
+            
+            // Update components
+            updateChildEmotionBreakdown(childEmotionStats);
+            updateChildActivityTimeline(childActivity);
+            updateChildRecentDetections(emotionLogs);
+        }
+        
+        function updateChildEmotionBreakdown(emotionStats) {
+            const container = document.getElementById('childEmotionBreakdown');
+            
+            if (!emotionStats || Object.keys(emotionStats).length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-3">
+                        <i class="fas fa-chart-pie text-muted"></i>
+                        <p class="text-muted mt-2">Belum ada data emosi</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            const sortedEmotions = Object.entries(emotionStats)
+                .sort(([,a], [,b]) => b - a);
+            
+            const emotionsHtml = sortedEmotions.map(([emotion, count]) => `
+                <div class="emotion-item">
+                    <span class="emotion-name">${emotion.charAt(0).toUpperCase() + emotion.slice(1)}</span>
+                    <span class="emotion-count">${count}</span>
+                </div>
+            `).join('');
+            
+            container.innerHTML = emotionsHtml;
+        }
+        
+        function updateChildActivityTimeline(activities) {
+            const container = document.getElementById('childActivityTimeline');
+            
+            if (!activities || activities.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-3">
+                        <i class="fas fa-clock text-muted"></i>
+                        <p class="text-muted mt-2">Belum ada aktivitas</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            const activitiesHtml = activities.map(activity => {
+                const time = new Date(activity.timestamp).toLocaleTimeString('id-ID', {
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+                
+                return `
+                    <div class="activity-item">
+                        <div class="activity-info">
+                            <div class="activity-description">${activity.description}</div>
+                            <div class="activity-time">${time}</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            container.innerHTML = activitiesHtml;
+        }
+        
+        function updateChildRecentDetections(emotionLogs) {
+            const container = document.getElementById('childRecentDetections');
+            
+            if (!emotionLogs || emotionLogs.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-3">
+                        <i class="fas fa-eye text-muted"></i>
+                        <p class="text-muted mt-2">Belum ada deteksi</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            const detectionsHtml = emotionLogs.slice(0, 5).map(log => {
+                const time = new Date(log.detected_at).toLocaleTimeString('id-ID', {
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+                
+                return `
+                    <div class="detection-item">
+                        <div class="detection-info">
+                            <div class="detection-emotion">
+                                <span class="emotion-badge ${log.emotion}">${log.emotion.charAt(0).toUpperCase() + log.emotion.slice(1)}</span>
+                            </div>
+                            <div class="detection-time">${time}</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            container.innerHTML = detectionsHtml;
+        }
+        
+
+        // Pagination variables for sessions
+        let allSessions = [];
+        let currentSessionsPage = 1;
+        const sessionsPerPage = 6;
+        
+        // Load child sessions
+        async function loadChildSessions() {
+            try {
+                const response = await fetch('/api/parent/sessions', {
+                    headers: {
+                        'Authorization': 'Bearer ' + localStorage.getItem('access_token')
+                    }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    allSessions = data.sessions || [];
+                    currentSessionsPage = 1; // Reset to first page
+                    displayChildSessions();
+                } else {
+                    showNotification('Gagal memuat sesi anak', 'danger');
+                }
+                
+            } catch (error) {
+                console.error('Error loading child sessions:', error);
+                showNotification('Gagal memuat sesi anak: ' + error.message, 'danger');
+            }
+        }
+        
+        function displayChildSessions() {
+            const container = document.getElementById('childSessionsList');
+            const paginationContainer = document.getElementById('sessionsPagination');
+            
+            if (!allSessions || allSessions.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-4">
+                        <i class="fas fa-calendar text-muted" style="font-size: 2rem;"></i>
+                        <p class="text-muted mt-2">Belum ada sesi untuk anak Anda</p>
+                    </div>
+                `;
+                paginationContainer.style.display = 'none';
+                return;
+            }
+            
+            // Calculate pagination
+            const totalSessions = allSessions.length;
+            const totalPages = Math.ceil(totalSessions / sessionsPerPage);
+            const startIndex = (currentSessionsPage - 1) * sessionsPerPage;
+            const endIndex = Math.min(startIndex + sessionsPerPage, totalSessions);
+            
+            // Get current page sessions
+            const currentPageSessions = allSessions.slice(startIndex, endIndex);
+            
+            // Generate HTML for current page
+            const sessionsHtml = currentPageSessions.map(session => {
+                const startTime = new Date(session.start_time).toLocaleString('id-ID', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+                
+                const statusClass = session.status === 'active' ? 'active' : 'completed';
+                const statusText = session.status === 'active' ? 'Aktif' : 'Selesai';
+                
+                return `
+                    <div class="child-session-item" onclick="loadParentSessionDetail(${session.id}, ${session.child_id})">
+                        <div class="child-session-header">
+                            <h6 class="child-session-title">${session.session_name || 'Sesi Tanpa Nama'}</h6>
+                            <span class="child-session-status ${statusClass}">${statusText}</span>
+                        </div>
+                        
+                        <div class="child-session-info">
+                            <div class="child-session-child">👶 ${session.child_name}</div>
+                            <div class="child-session-time">📅 ${startTime}</div>
+                        </div>
+                        
+                        <div class="child-session-stats">
+                            <div class="child-session-stat">
+                                <span class="child-session-stat-value">${session.total_detections || 0}</span>
+                                <span class="child-session-stat-label">Deteksi</span>
+                            </div>
+                            <div class="child-session-stat">
+                                <span class="child-session-stat-value">${session.unique_emotions || 0}</span>
+                                <span class="child-session-stat-label">Emosi</span>
+                            </div>
+                        </div>
+                        
+                        <div class="child-session-footer">
+                            <div class="child-session-teacher">👨‍🏫 ${session.teacher_name || 'Unknown'}</div>
+                            <button class="child-session-btn" onclick="event.stopPropagation(); loadParentSessionDetail(${session.id}, ${session.child_id})">
+                                <i class="fas fa-info-circle me-1"></i>Detail
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            container.innerHTML = `<div class="child-sessions-grid">${sessionsHtml}</div>`;
+            
+            // Update pagination
+            updateSessionsPagination(startIndex + 1, endIndex, totalSessions, totalPages);
+        }
+        
+        function updateSessionsPagination(start, end, total, totalPages) {
+            const paginationContainer = document.getElementById('sessionsPagination');
+            const startSpan = document.getElementById('sessionsStart');
+            const endSpan = document.getElementById('sessionsEnd');
+            const totalSpan = document.getElementById('sessionsTotal');
+            const currentPageSpan = document.getElementById('sessionsCurrentPage');
+            const totalPagesSpan = document.getElementById('sessionsTotalPages');
+            const prevBtn = document.getElementById('sessionsPrevBtn');
+            const nextBtn = document.getElementById('sessionsNextBtn');
+            
+            // Update pagination info
+            startSpan.textContent = start;
+            endSpan.textContent = end;
+            totalSpan.textContent = total;
+            currentPageSpan.textContent = currentSessionsPage;
+            totalPagesSpan.textContent = totalPages;
+            
+            // Update button states
+            prevBtn.classList.toggle('disabled', currentSessionsPage <= 1);
+            nextBtn.classList.toggle('disabled', currentSessionsPage >= totalPages);
+            
+            // Show pagination if there are multiple pages
+            paginationContainer.style.display = totalPages > 1 ? 'flex' : 'none';
+        }
+        
+        function changeSessionsPage(direction) {
+            const totalPages = Math.ceil(allSessions.length / sessionsPerPage);
+            const newPage = currentSessionsPage + direction;
+            
+            if (newPage >= 1 && newPage <= totalPages) {
+                currentSessionsPage = newPage;
+                displayChildSessions();
+            }
+        }
+
+        // Load confidence data for confidence panel
+        let confidenceDataLoading = false;
+        async function loadConfidenceData() {
+            // Prevent multiple simultaneous requests
+            if (confidenceDataLoading) {
+                console.log('Confidence data already loading, skipping...');
+                return;
+            }
+            
+            try {
+                confidenceDataLoading = true;
+                showLoading('confidenceSection', 'Memuat data kepercayaan...');
+                
+                // Ambil data dari API children untuk mendapatkan emotion stats
+                const response = await safeFetch('/api/parent/children', {
+                    headers: {
+                        'Authorization': 'Bearer ' + localStorage.getItem('access_token')
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                const children = data.children || [];
+                
+                // Agregasi emotion stats dari semua anak
+                const aggregatedStats = {};
+                let currentEmotion = null;
+                let maxConfidence = 0;
+                
+                children.forEach(child => {
+                    if (child.emotion_stats) {
+                        Object.entries(child.emotion_stats).forEach(([emotion, count]) => {
+                            if (!aggregatedStats[emotion]) {
+                                aggregatedStats[emotion] = { count: 0, total_confidence: 0 };
+                            }
+                            aggregatedStats[emotion].count += count;
+                            
+                            // Simulasi confidence score yang lebih realistis
+                            const baseConfidence = 0.7; // Base confidence
+                            const variation = Math.random() * 0.3; // 0-0.3 variation
+                            const simulatedConfidence = Math.min(0.95, baseConfidence + variation); // 0.7-0.95
+                            aggregatedStats[emotion].total_confidence += simulatedConfidence * count;
+                            
+                            // Tentukan emosi dengan confidence tertinggi
+                            const avgConfidence = aggregatedStats[emotion].total_confidence / aggregatedStats[emotion].count;
+                            if (avgConfidence > maxConfidence) {
+                                maxConfidence = avgConfidence;
+                                currentEmotion = emotion;
+                            }
+                        });
+                    }
+                });
+                
+                // Hitung average confidence untuk setiap emosi
+                Object.keys(aggregatedStats).forEach(emotion => {
+                    aggregatedStats[emotion].avg_confidence = aggregatedStats[emotion].total_confidence / aggregatedStats[emotion].count;
+                });
+                
+                // Update confidence indicators
+                updateConfidenceIndicators(aggregatedStats);
+                
+                // Update current emotion display
+                if (currentEmotion && aggregatedStats[currentEmotion]) {
+                    updateCurrentEmotionDisplay(currentEmotion, aggregatedStats[currentEmotion]);
+                } else {
+                    // Fallback jika tidak ada data
+                    document.getElementById('currentEmotion').innerHTML = `
+                        <div class="current-emotion-display">
+                            <h3>Tidak ada data emosi terbaru</h3>
+                            <p class="text-muted">Data akan muncul saat ada aktivitas anak</p>
+                        </div>
+                    `;
+                }
+                
+                showNotification('Data kepercayaan berhasil dimuat', 'success', 3000);
+                
+            } catch (error) {
+                console.error('Error loading confidence data:', error);
+                showNotification('Gagal memuat data kepercayaan: ' + error.message, 'danger');
+                
+                // Show fallback content
+                document.getElementById('confidenceIndicators').innerHTML = `
+                    <div class="text-center py-4">
+                        <i class="fas fa-chart-line text-muted" style="font-size: 2rem;"></i>
+                        <p class="text-muted mt-2">Gagal memuat data kepercayaan</p>
+                        <button class="btn btn-sm btn-outline-primary" onclick="loadConfidenceData()">
+                            <i class="fas fa-refresh me-1"></i>Coba Lagi
+                        </button>
+                    </div>
+                `;
+            } finally {
+                confidenceDataLoading = false;
+                hideLoading('confidenceSection');
+            }
+        }
+        
+        // Load dashboard data - Enhanced version using parent sessions API
+        async function loadDashboardData() {
+            try {
+                showLoading('dashboardStats', 'Memuat data dashboard...');
+                
+                // Ambil data dari API yang lebih tepat
+                const [sessionsResponse, childrenResponse] = await Promise.all([
+                    safeFetch('/api/parent/sessions', {
+                    headers: {
+                        'Authorization': 'Bearer ' + localStorage.getItem('access_token')
+                    }
+                    }),
+                    safeFetch('/api/parent/children', {
+                        headers: {
+                            'Authorization': 'Bearer ' + localStorage.getItem('access_token')
+                        }
+                    })
+                ]);
+                
+                const sessionsData = await sessionsResponse.json();
+                const childrenData = await childrenResponse.json();
+                
+                // Proses data sessions
+                const sessions = sessionsData.sessions || [];
+                const children = childrenData.children || [];
+                
+                // Hitung statistik dari data sessions
+                const now = new Date();
+                const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+                
+                // Filter sesi minggu ini
+                const weeklySessions = sessions.filter(session => {
+                    const sessionDate = new Date(session.start_time);
+                    return sessionDate >= weekAgo;
+                });
+                
+                // Hitung total sesi
+                const totalSessions = sessions.length;
+                
+                // Hitung emosi dari children data
+                const emotionData = {};
+                let totalEmotions = 0;
+                let positiveEmotions = 0;
+                
+                children.forEach(child => {
+                    if (child.emotion_stats) {
+                        Object.entries(child.emotion_stats).forEach(([emotion, count]) => {
+                            emotionData[emotion] = (emotionData[emotion] || 0) + count;
+                            totalEmotions += count;
+                            if (emotion === 'happy' || emotion === 'surprise') {
+                                positiveEmotions += count;
+                            }
+                        });
+                    }
+                });
+                
+                // Tentukan emosi dominan
+                const dominantEmotion = Object.keys(emotionData).length > 0 
+                    ? Object.keys(emotionData).reduce((a, b) => emotionData[a] > emotionData[b] ? a : b)
+                    : 'Neutral';
+                
+                // Hitung trend positif
+                const positiveTrend = totalEmotions > 0 ? (positiveEmotions / totalEmotions * 100) : 0;
+                
+                // Update dashboard stats
+                document.getElementById('totalChildren').textContent = children.length;
+                document.getElementById('avgEmotion').textContent = dominantEmotion;
+                document.getElementById('weeklySessions').textContent = weeklySessions.length;
+                document.getElementById('totalSessions').textContent = totalSessions;
+                
+                // Update emotion chart
+                if (Object.keys(emotionData).length > 0) {
+                    updateEmotionChart(emotionData);
+                }
+                
+                showNotification('Data dashboard berhasil dimuat', 'success', 3000);
+                
+            } catch (error) {
+                console.error('Error loading dashboard data:', error);
+                showNotification('Gagal memuat data dashboard', 'danger');
+            } finally {
+                hideLoading('dashboardStats', 'Dashboard');
+            }
+        }
+        
+        // Load children data - Enhanced version using same API as sessions
+        async function loadChildren() {
+            try {
+                showLoading('childrenSection', 'Memuat data anak...');
+                
+                // Use same API as sessions for consistency
+                const [childrenResponse, sessionsResponse] = await Promise.all([
+                    safeFetch('/api/parent/children', {
+                    headers: {
+                        'Authorization': 'Bearer ' + localStorage.getItem('access_token')
+                    }
+                    }),
+                    safeFetch('/api/parent/sessions', {
+                        headers: {
+                            'Authorization': 'Bearer ' + localStorage.getItem('access_token')
+                        }
+                    })
+                ]);
+                
+                if (!childrenResponse.ok) {
+                    throw new Error(`HTTP ${childrenResponse.status}: ${childrenResponse.statusText}`);
+                }
+                
+                const childrenData = await childrenResponse.json();
+                const sessionsData = await sessionsResponse.json();
+                
+                console.log('Raw children data:', childrenData);
+                console.log('Raw sessions data:', sessionsData);
+                
+                // Handle response format yang mungkin berbeda
+                let children = [];
+                if (childrenData.children && Array.isArray(childrenData.children)) {
+                    children = childrenData.children;
+                } else if (Array.isArray(childrenData)) {
+                    children = childrenData;
+                } else {
+                    console.warn('Unexpected children response format:', childrenData);
+                    children = [];
+                }
+                
+                const sessions = sessionsData.sessions || [];
+                console.log('Processed children data:', children);
+                console.log('Processed sessions data:', sessions);
+                
+                if (children && children.length > 0) {
+                    // Enhance children data with session data
+                    const enhancedChildren = children.map(child => {
+                        // Filter sessions for this child
+                        const childSessions = sessions.filter(session => session.child_id == child.id);
+                        
+                        // Calculate session insights
+                        const now = new Date();
+                        const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+                        
+                        const weeklySessions = childSessions.filter(session => 
+                            new Date(session.start_time) >= weekAgo
+                        );
+                        
+                        const totalSessions = childSessions.length;
+                        const totalDetections = childSessions.reduce((sum, session) => 
+                            sum + (session.total_detections || 0), 0
+                        );
+                        
+                        const avgDetectionsPerSession = totalSessions > 0 ? totalDetections / totalSessions : 0;
+                        
+                        // Get most recent session
+                        const mostRecentSession = childSessions.length > 0 ? 
+                            childSessions.sort((a, b) => new Date(b.start_time) - new Date(a.start_time))[0] : null;
+                        
+                        return {
+                            ...child,
+                            // Override with session-based data
+                            weekly_sessions: weeklySessions.length,
+                            total_sessions: totalSessions,
+                            total_detections: totalDetections,
+                            avg_detections_per_session: Math.round(avgDetectionsPerSession * 10) / 10,
+                            last_session: mostRecentSession ? 
+                                new Date(mostRecentSession.start_time).toLocaleDateString('id-ID') : 
+                                'Belum ada'
+                        };
+                    });
+                    
+                    console.log('Enhanced children data:', enhancedChildren);
+                    displayChildren(enhancedChildren);
+                    populateChildSelect(enhancedChildren);
+                    showNotification(`Data ${enhancedChildren.length} anak berhasil dimuat`, 'success', 3000);
+                } else {
+                    console.log('No children data, showing empty state');
+                    showNotification('Belum ada data anak yang terdaftar', 'info');
+                    displayChildren([]);
+                    populateChildSelect([]);
+                }
+                
+            } catch (error) {
+                console.error('Error loading children:', error);
+                showNotification('Gagal memuat data anak: ' + error.message, 'danger');
+                displayChildren([]);
+                populateChildSelect([]);
+            } finally {
+                hideLoading('childrenSection');
+            }
+        }
+        
+        function displayChildren(children) {
+            console.log('displayChildren called with:', children);
+            let container = document.getElementById('childrenList');
+            
+            // Cek apakah container ada
+            if (!container) {
+                console.error('Element childrenList tidak ditemukan');
+                return;
+            }
+            
+            console.log('Container found:', container);
+            container.innerHTML = '';
+            
+            // Handle empty state
+            if (!children || children.length === 0) {
+                container.innerHTML = `
+                    <div class="col-12">
+                        <div class="text-center py-5">
+                            <i class="fas fa-child text-muted" style="font-size: 4rem;"></i>
+                            <h4 class="text-muted mt-3">Belum Ada Data Anak</h4>
+                            <p class="text-muted">Silakan hubungi administrator untuk mendaftarkan anak Anda.</p>
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+            
+            (children || []).forEach((child, index) => {
+                console.log(`Processing child ${index}:`, child);
+                
+                // Validate required fields
+                if (!child.id || !child.full_name) {
+                    console.warn(`Skipping invalid child data:`, child);
+                    return;
+                }
+                
+                const div = document.createElement('div');
+                div.className = 'col-md-6 col-lg-4';
+                div.innerHTML = `
+                    <div class="child-card">
+                        <div class="d-flex justify-content-between align-items-start mb-3">
+                            <div>
+                                <h5 class="mb-1">${child.full_name || 'Nama tidak tersedia'}</h5>
+                                <small>${child.student_code || 'N/A'} - ${child.class_name || 'Belum ada kelas'}</small>
+                            </div>
+                            <div class="text-end">
+                                <span class="emotion-badge emotion-${child.last_emotion || 'neutral'}">
+                                    ${child.last_emotion || 'Unknown'}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="row text-center">
+                            <div class="col-3">
+                                <h6 class="mb-0">${child.weekly_sessions || 0}</h6>
+                                <small>Sesi Minggu Ini</small>
+                            </div>
+                            <div class="col-3">
+                                <h6 class="mb-0">${child.total_sessions || 0}</h6>
+                                <small>Total Sesi</small>
+                            </div>
+                            <div class="col-3">
+                                <h6 class="mb-0">${child.total_detections || 0}</h6>
+                                <small>Total Deteksi</small>
+                            </div>
+                            <div class="col-3">
+                                <h6 class="mb-0">${child.avg_detections_per_session || 0}</h6>
+                                <small>Rata-rata/Sesi</small>
+                            </div>
+                        </div>
+                        <div class="row text-center mt-2">
+                            <div class="col-6">
+                                <h6 class="mb-0">${child.avg_emotion_score || 0}%</h6>
+                                <small>Skor Positif</small>
+                            </div>
+                            <div class="col-6">
+                                <h6 class="mb-0">${child.last_session || 'Belum ada'}</h6>
+                                <small>Sesi Terakhir</small>
+                            </div>
+                        </div>
+                        <div class="mt-3">
+                            <button class="btn btn-light btn-sm w-100" onclick="viewChildDetails(${child.id}, '${(child.full_name || '').replace(/'/g, "\\'")}')">
+                                <i class="fas fa-eye"></i> Lihat Detail
+                            </button>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+        }
+        
+        function populateChildSelect(children) {
+            const select = document.getElementById('childSelect');
+            
+            // Cek apakah select element ada
+            if (!select) {
+                console.error('Element childSelect tidak ditemukan');
+                return;
+            }
+            
+            select.innerHTML = '<option value="">Pilih anak...</option>';
+            (children || []).forEach(child => {
+                const option = document.createElement('option');
+                option.value = child.id;
+                option.textContent = `${child.full_name} (${child.student_code})`;
+                select.appendChild(option);
+            });
+        }
+        
+        // Load reports - Enhanced version
+        let _loadReportsLock = false;
+        let _loadReportsAbort = null;
+        async function loadReports() {
+            if (_loadReportsLock) return;
+            _loadReportsLock = true;
+            const childId = document.getElementById('childSelect').value;
+            const period = document.getElementById('periodSelect').value;
+            
+            if (!childId) {
+                showNotification('Pilih anak terlebih dahulu!', 'warning');
+                _loadReportsLock = false;
+                return;
+            }
+            
+            // Store button state outside try block
+            const btn = document.getElementById('loadReportsBtn');
+            const btnText = btn ? btn.innerHTML : null;
+            
+            try {
+                showLoading('reportsSection', 'Memuat laporan...');
+                if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Memuat...'; }
+                const selChild = document.getElementById('childSelect');
+                const selPeriod = document.getElementById('periodSelect');
+                if (selChild) selChild.disabled = true;
+                if (selPeriod) selPeriod.disabled = true;
+                if (_loadReportsAbort) { try { _loadReportsAbort.abort(); } catch(e){} }
+                _loadReportsAbort = new AbortController();
+                
+                const response = await fetch(`/api/parent/reports/${childId}?period=${period}`, {
+                    headers: { 
+                        'Authorization': 'Bearer ' + localStorage.getItem('access_token') 
+                    },
+                    signal: _loadReportsAbort.signal
+                });
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                
+                const data = await response.json();
+                
+                if (data.timeline && data.timeline.length > 0) {
+                    displayEmotionTimeline(data.timeline);
+                    showNotification(`Laporan ${data.timeline.length} data berhasil dimuat`, 'success', 3000);
+                } else {
+                    showNotification('Tidak ada data laporan untuk periode ini', 'info');
+                    displayEmotionTimeline([]);
+                }
+                
+                // Update per-child distribution alongside timeline
+                await fetchChildDistribution(childId, period);
+                
+            } catch (error) {
+                console.error('Error loading reports:', error);
+                if (error.name !== 'AbortError') {
+                    showNotification('Gagal memuat laporan', 'danger');
+                }
+                displayEmotionTimeline([]);
+            } finally {
+                hideLoading('reportsSection', 'Laporan');
+                if (btn && btnText) { btn.disabled = false; btn.innerHTML = btnText; }
+                const selChild = document.getElementById('childSelect');
+                const selPeriod = document.getElementById('periodSelect');
+                if (selChild) selChild.disabled = false;
+                if (selPeriod) selPeriod.disabled = false;
+                _loadReportsLock = false;
+            }
+        }
+        
+        function displayEmotionTimeline(timeline) {
+            const container = document.getElementById('emotionTimeline');
+            container.innerHTML = '';
+            
+            if (timeline.length === 0) {
+                container.innerHTML = '<p class="text-muted">Tidak ada data untuk periode ini</p>';
+                return;
+            }
+            
+            timeline.forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'timeline-item';
+                div.innerHTML = `
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="mb-1">${item.date}</h6>
+                            <p class="mb-0">${item.session_name || 'Sesi Deteksi Emosi'}</p>
+                        </div>
+                        <div>
+                            <span class="emotion-badge emotion-${item.emotion}">
+                                ${item.emotion}
+                            </span>
+                        </div>
+                    </div>
+                    <small class="text-muted">${item.time}</small>
+                `;
+                container.appendChild(div);
+            });
+        }
+        
+        // Initialize emotion chart
+        function initializeEmotionChart() {
+            const ctx = document.getElementById('emotionChart').getContext('2d');
+            emotionChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Happy', 'Sad', 'Angry', 'Fear', 'Surprise', 'Disgust', 'Neutral'],
+                    datasets: [{
+                        data: [35, 15, 5, 10, 8, 2, 25],
+                        backgroundColor: [
+                            '#4CAF50',
+                            '#2196F3',
+                            '#F44336',
+                            '#9C27B0',
+                            '#FF9800',
+                            '#795548',
+                            '#607D8B'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                padding: 20,
+                                usePointStyle: true,
+                                pointStyle: 'circle'
+                            }
+                        }
+                    },
+                    animation: false
+                }
+            });
+        }
+        
+        function updateEmotionChart(data) {
+            if (emotionChart) {
+                const values = [
+                    data.happy || 0,
+                    data.sad || 0,
+                    data.angry || 0,
+                    data.fear || 0,
+                    data.surprise || 0,
+                    data.disgust || 0,
+                    data.neutral || 0
+                ];
+                const total = values.reduce((a,b)=>a+b,0);
+                if(total === 0){ return; }
+                emotionChart.data.datasets[0].data = values;
+                emotionChart.update('none');
+            }
+        }
+        
+        // Child management
+        // Calculate insights for child detail modal
+        function calculateChildInsights(child, childSessions) {
+            const now = new Date();
+            const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+            const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+            
+            // Filter sessions by time
+            const weeklySessions = childSessions.filter(session => 
+                new Date(session.start_time) >= weekAgo
+            );
+            const monthlySessions = childSessions.filter(session => 
+                new Date(session.start_time) >= monthAgo
+            );
+            
+            // Calculate session statistics
+            const totalSessions = childSessions.length;
+            const totalDetections = childSessions.reduce((sum, session) => 
+                sum + (session.total_detections || 0), 0
+            );
+            const totalEmotions = childSessions.reduce((sum, session) => 
+                sum + (session.unique_emotions || 0), 0
+            );
+            
+            // Calculate activity level
+            let activityLevel = 'Rendah';
+            if (weeklySessions.length >= 5) activityLevel = 'Tinggi';
+            else if (weeklySessions.length >= 2) activityLevel = 'Sedang';
+            
+            // Calculate engagement score
+            const avgDetectionsPerSession = totalSessions > 0 ? totalDetections / totalSessions : 0;
+            let engagementScore = 'Rendah';
+            if (avgDetectionsPerSession >= 10) engagementScore = 'Tinggi';
+            else if (avgDetectionsPerSession >= 5) engagementScore = 'Sedang';
+            
+            // Calculate trend
+            const weeklyTrend = weeklySessions.length;
+            const monthlyTrend = monthlySessions.length;
+            let trend = 'Stabil';
+            if (weeklyTrend > monthlyTrend / 4) trend = 'Meningkat';
+            else if (weeklyTrend < monthlyTrend / 6) trend = 'Menurun';
+            
+            // Get recent activity
+            const recentSessions = childSessions.slice(0, 3);
+            
+            return {
+                totalSessions,
+                totalDetections,
+                totalEmotions,
+                weeklySessions: weeklySessions.length,
+                monthlySessions: monthlySessions.length,
+                activityLevel,
+                engagementScore,
+                trend,
+                recentSessions,
+                avgDetectionsPerSession: Math.round(avgDetectionsPerSession * 10) / 10
+            };
+        }
+
+        function viewChildDetails(childId, childName) {
+            // Show child details modal
+            showChildDetailsModal(childId, childName);
+        }
+        
+        function showChildDetailsModal(childId, childName) {
+            // Get child data using the same API as sessions
+            Promise.all([
+            fetch(`/api/parent/children/${childId}`, {
+                headers: {
+                    'Authorization': 'Bearer ' + localStorage.getItem('access_token')
+                }
+                }).then(response => response.json()),
+                fetch('/api/parent/sessions', {
+                    headers: {
+                        'Authorization': 'Bearer ' + localStorage.getItem('access_token')
+                    }
+                }).then(response => response.json())
+            ])
+            .then(([childData, sessionsData]) => {
+                if (childData.error) {
+                    showNotification('Error: ' + childData.error, 'danger');
+                    return;
+                }
+                
+                const child = childData;
+                const sessions = sessionsData.sessions || [];
+                
+                // Filter sessions for this specific child
+                const childSessions = sessions.filter(session => session.child_id == childId);
+                
+                // Calculate insights
+                const insights = calculateChildInsights(child, childSessions);
+                
+                const modal = document.createElement('div');
+                modal.className = 'modal fade';
+                modal.id = 'childDetailsModal';
+                modal.innerHTML = `
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">
+                                    <i class="fas fa-child me-2" style="color: #fb923c;"></i>Detail Anak
+                                </h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="row">
+                                    <div class="col-md-4 text-center">
+                                        <div class="child-photo mb-3">
+                                            <img id="childPhotoImg" 
+                                                 class="img-fluid rounded-circle" 
+                                                 style="width: 150px; height: 150px; object-fit: cover;"
+                                                 alt="Child Photo">
+                                        </div>
+                                        <div class="d-grid gap-2">
+                                            <label class="btn btn-outline-primary btn-sm">
+                                                <i class="fas fa-upload me-1"></i> Upload Foto Profil
+                                                <input type="file" id="childPhotoInput" accept="image/*" style="display:none" />
+                                            </label>
+                                            <button class="btn btn-outline-secondary btn-sm" onclick="loadChildPhotoAuthorized(${child.id}, true)">
+                                                <i class="fas fa-rotate me-1"></i> Refresh Foto
+                                            </button>
+                                        </div>
+                                        <h6 class="text-muted">${child.student_code}</h6>
+                                    </div>
+                                    <div class="col-md-8">
+                                        <div class="row mb-3">
+                                            <div class="col-sm-4"><strong>Nama Lengkap:</strong></div>
+                                            <div class="col-sm-8">${child.full_name}</div>
+                                        </div>
+                                        <div class="row mb-3">
+                                            <div class="col-sm-4"><strong>Kelas:</strong></div>
+                                            <div class="col-sm-8">${child.class_name}</div>
+                                        </div>
+                                        <div class="row mb-3">
+                                            <div class="col-sm-4"><strong>Tanggal Lahir:</strong></div>
+                                            <div class="col-sm-8">${child.birth_date || 'Tidak diisi'}</div>
+                                        </div>
+                                        <div class="row mb-3">
+                                            <div class="col-sm-4"><strong>Guru:</strong></div>
+                                            <div class="col-sm-8">${child.teacher_name || 'Tidak diketahui'}</div>
+                                        </div>
+                                        <div class="row mb-3">
+                                            <div class="col-sm-4"><strong>Status:</strong></div>
+                                            <div class="col-sm-8">
+                                                <span class="badge ${child.is_active ? 'bg-success' : 'bg-danger'}">
+                                                    ${child.is_active ? 'Aktif' : 'Tidak Aktif'}
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <div class="row mb-3">
+                                            <div class="col-sm-4"><strong>Emosi Terakhir:</strong></div>
+                                            <div class="col-sm-8">
+                                                <span class="badge bg-info">${child.last_emotion || 'Belum terdeteksi'}</span>
+                                            </div>
+                                        </div>
+                                        <div class="row mb-3">
+                                            <div class="col-sm-4"><strong>Total Sesi:</strong></div>
+                                            <div class="col-sm-8">${insights.totalSessions} sesi</div>
+                                        </div>
+                                        <div class="row mb-3">
+                                            <div class="col-sm-4"><strong>Total Deteksi:</strong></div>
+                                            <div class="col-sm-8">${insights.totalDetections} kali</div>
+                                        </div>
+                                        <div class="row mb-3">
+                                            <div class="col-sm-4"><strong>Sesi Minggu Ini:</strong></div>
+                                            <div class="col-sm-8">${insights.weeklySessions} sesi</div>
+                                        </div>
+                                        <div class="row mb-3">
+                                            <div class="col-sm-4"><strong>Rata-rata Deteksi/Sesi:</strong></div>
+                                            <div class="col-sm-8">${insights.avgDetectionsPerSession} kali</div>
+                                        </div>
+                                        <div class="row mb-3">
+                                            <div class="col-sm-4"><strong>Skor Positif:</strong></div>
+                                            <div class="col-sm-8">${child.avg_emotion_score || 0}%</div>
+                                        </div>
+                                        <div class="row mb-3">
+                                            <div class="col-sm-4"><strong>Sesi Terakhir:</strong></div>
+                                            <div class="col-sm-8">${child.last_session || 'Belum ada'}</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Insights Section -->
+                                <div class="mt-4">
+                                    <h6 class="mb-3"><i class="fas fa-lightbulb me-2" style="color: #f59e0b;"></i>Insight & Analisis</h6>
+                                    <div class="row">
+                                        <div class="col-md-4">
+                                            <div class="card border-0 bg-light">
+                                                <div class="card-body text-center">
+                                                    <i class="fas fa-chart-line fa-2x mb-2" style="color: #22c55e;"></i>
+                                                    <h6 class="card-title">Level Aktivitas</h6>
+                                                    <span class="badge ${insights.activityLevel === 'Tinggi' ? 'bg-success' : insights.activityLevel === 'Sedang' ? 'bg-warning' : 'bg-secondary'}">
+                                                        ${insights.activityLevel}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="card border-0 bg-light">
+                                                <div class="card-body text-center">
+                                                    <i class="fas fa-heart fa-2x mb-2" style="color: #ef4444;"></i>
+                                                    <h6 class="card-title">Tingkat Engagement</h6>
+                                                    <span class="badge ${insights.engagementScore === 'Tinggi' ? 'bg-success' : insights.engagementScore === 'Sedang' ? 'bg-warning' : 'bg-secondary'}">
+                                                        ${insights.engagementScore}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="card border-0 bg-light">
+                                                <div class="card-body text-center">
+                                                    <i class="fas fa-trending-up fa-2x mb-2" style="color: #3b82f6;"></i>
+                                                    <h6 class="card-title">Trend Aktivitas</h6>
+                                                    <span class="badge ${insights.trend === 'Meningkat' ? 'bg-success' : insights.trend === 'Menurun' ? 'bg-danger' : 'bg-info'}">
+                                                        ${insights.trend}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Recent Sessions -->
+                                    <div class="mt-4">
+                                        <h6 class="mb-3"><i class="fas fa-history me-2" style="color: #8b5cf6;"></i>Sesi Terbaru</h6>
+                                        <div class="list-group">
+                                            ${insights.recentSessions.map(session => `
+                                                <div class="list-group-item d-flex justify-content-between align-items-center">
+                                                    <div>
+                                                        <h6 class="mb-1">${session.session_name || 'Sesi Tanpa Nama'}</h6>
+                                                        <small class="text-muted">${new Date(session.start_time).toLocaleDateString('id-ID')}</small>
+                                                    </div>
+                                                    <div class="text-end">
+                                                        <span class="badge bg-primary me-2">${session.total_detections || 0} deteksi</span>
+                                                        <span class="badge bg-info">${session.unique_emotions || 0} emosi</span>
+                                                    </div>
+                                                </div>
+                                            `).join('')}
+                                            ${insights.recentSessions.length === 0 ? '<div class="text-center text-muted py-3">Belum ada sesi terbaru</div>' : ''}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
+                                <button type="button" class="btn btn-primary" onclick="downloadChildReport(${child.id})">
+                                    <i class="fas fa-download me-2"></i>Download Laporan
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                document.body.appendChild(modal);
+                const bsModal = new bootstrap.Modal(modal);
+                bsModal.show();
+                
+                // Load emotion chart after modal is shown
+                modal.addEventListener('shown.bs.modal', () => {
+                    setTimeout(() => {
+                        loadChildEmotionChart(child.id);
+                    }, 100);
+                    // Load child photo via authorized fetch to avoid 401 image loads
+                    loadChildPhotoAuthorized(child.id);
+                    const input = document.getElementById('childPhotoInput');
+                    if (input) {
+                        input.onchange = () => {
+                            if (!input.files || !input.files[0]) return;
+                            uploadChildPhoto(child.id, input.files[0]);
+                        };
+                    }
+                });
+                
+                // Remove modal from DOM when hidden and cleanup chart/blob urls
+                modal.addEventListener('hidden.bs.modal', () => {
+                    try{
+                        if (window.childEmotionChartInstance) {
+                            window.childEmotionChartInstance.destroy();
+                            window.childEmotionChartInstance = null;
+                        }
+                        const img = document.getElementById('childPhotoImg');
+                        if (img && img.dataset.url) { URL.revokeObjectURL(img.dataset.url); }
+                    }catch(e){}
+                    document.body.removeChild(modal);
+                });
+            })
+            .catch(error => {
+                console.error('Error loading child details:', error);
+                showNotification('Gagal memuat detail anak: ' + error.message, 'danger');
+            });
+        }
+        
+        function loadChildEmotionChart(childId) {
+            console.log('Loading emotion chart for child:', childId);
+            
+            fetch(`/api/parent/children/${childId}/emotions`, {
+                headers: {
+                    'Authorization': 'Bearer ' + localStorage.getItem('access_token')
+                }
+            })
+            .then(response => {
+                console.log('Emotion API response status:', response.status);
+                return response.json();
+            })
+            .then(data => {
+                console.log('Emotion data received:', data);
+                
+                if (data.error) {
+                    console.error('Error loading emotion data:', data.error);
+                    showNotification('Gagal memuat data emosi: ' + data.error, 'danger');
+                    return;
+                }
+
+                // Determine if there is any data to plot
+                const hasPerEmotion = Array.isArray(data.datasets) && data.datasets.length > 0;
+                let totalSum = 0;
+                if (hasPerEmotion) {
+                    data.datasets.forEach(ds => {
+                        (ds.data || []).forEach(v => { totalSum += (v || 0); });
+                    });
+                } else {
+                    (data.values || []).forEach(v => { totalSum += (v || 0); });
+                }
+                
+                // Create chart
+                let canvas = document.getElementById('childEmotionChart');
+                const containerEl = canvas ? canvas.parentElement : null;
+                // Ensure we have a stable canvas element
+                if (!canvas && containerEl) {
+                    canvas = document.createElement('canvas');
+                    canvas.id = 'childEmotionChart';
+                    containerEl.appendChild(canvas);
+                }
+
+                // Handle no data: keep canvas hidden, show message below it
+                let msg = document.getElementById('childEmotionChartMsg');
+                if (!totalSum) {
+                    if (window.childEmotionChartInstance) { try { window.childEmotionChartInstance.destroy(); } catch(e){} window.childEmotionChartInstance = null; }
+                    if (canvas) { canvas.style.display = 'none'; }
+                    if (msg) { msg.textContent = 'Belum ada deteksi emosi pada periode ini.'; msg.style.display = 'block'; }
+                    return;
+                } else {
+                    if (canvas) { canvas.style.display = 'block'; }
+                    if (msg) { msg.textContent = ''; msg.style.display = 'none'; }
+                }
+
+                const ctx = canvas;
+                if (ctx) {
+                    console.log('Creating chart with canvas:', ctx);
+                    
+                    // Destroy existing chart if any
+                    if (window.childEmotionChartInstance) {
+                        window.childEmotionChartInstance.destroy();
+                    }
+                    
+                    // Prefer stacked per-emotion datasets when available; fallback to flat values
+                    const colors = {
+                        happy: '#4CAF50', sad: '#2196F3', angry: '#F44336', fear: '#9C27B0',
+                        surprise: '#FF9800', disgust: '#795548', neutral: '#607D8B'
+                    };
+
+                    window.childEmotionChartInstance = new Chart(ctx, {
+                        type: hasPerEmotion ? 'bar' : 'line',
+                        data: hasPerEmotion ? {
+                            labels: data.labels || [],
+                            datasets: (data.datasets || []).map(ds => ({
+                                label: ds.label,
+                                data: ds.data,
+                                backgroundColor: colors[ds.label] || '#fb923c',
+                                borderColor: colors[ds.label] || '#fb923c',
+                                borderWidth: 1
+                            }))
+                        } : {
+                            labels: data.labels || [],
+                            datasets: [{
+                                label: 'Jumlah Deteksi Emosi',
+                                data: data.values || [],
+                                borderColor: '#fb923c',
+                                backgroundColor: 'rgba(251, 146, 60, 0.1)',
+                                tension: 0.4,
+                                fill: true
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            scales: hasPerEmotion ? {
+                                x: { stacked: true },
+                                y: { stacked: true, beginAtZero: true, ticks: { precision: 0, stepSize: 1, maxTicksLimit: 6 } }
+                            } : {
+                                y: { beginAtZero: true, ticks: { stepSize: 1, maxTicksLimit: 6 } }
+                            },
+                            plugins: {
+                                legend: {
+                                    display: true,
+                                    position: 'bottom'
+                                }
+                            },
+                            animation: false
+                        }
+                    });
+                    
+                    console.log('Chart created successfully');
+                } else {
+                    console.error('Canvas element childEmotionChart not found');
+                }
+            })
+            .catch(error => {
+                console.error('Error loading emotion chart:', error);
+                showNotification('Gagal memuat grafik emosi', 'danger');
+            });
+        }
+
+        async function uploadChildPhoto(childId, file){
+            try{
+                const form = new FormData();
+                form.append('file', file);
+                const res = await fetch(`/api/parent/children/${childId}/photo/upload`, {
+                    method: 'POST',
+                    headers: { 'Authorization': 'Bearer ' + localStorage.getItem('access_token') },
+                    body: form
+                });
+                const data = await res.json().catch(()=>({}));
+                if(!res.ok){
+                    throw new Error(data.error || 'Gagal mengupload foto');
+                }
+                showNotification('Foto profil berhasil diupload', 'success');
+                await loadChildPhotoAuthorized(childId, true);
+            }catch(e){
+                showNotification('Error: ' + (e.message||e), 'danger');
+            }
+        }
+
+        async function loadChildPhotoAuthorized(childId, bust=false){
+            try{
+                const res = await fetch(`/api/parent/children/${childId}/photo${bust?`?ts=${Date.now()}`:''}`, {
+                    headers: { 'Authorization': 'Bearer ' + localStorage.getItem('access_token') }
+                });
+                if(!res.ok){
+                    throw new Error('photo fetch failed');
+                }
+                const blob = await res.blob();
+                const img = document.getElementById('childPhotoImg');
+                if(!img) return;
+                // Revoke previous URL if any
+                if(img.dataset.url){
+                    try{ URL.revokeObjectURL(img.dataset.url); }catch(e){}
+                }
+                const url = URL.createObjectURL(blob);
+                img.dataset.url = url;
+                img.src = url;
+            }catch(e){
+                const img = document.getElementById('childPhotoImg');
+                if(!img) return;
+                img.removeAttribute('onerror');
+                img.src = 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22150%22 height=%22150%22 viewBox=%220 0 150 150%22%3E%3Cdefs%3E%3ClinearGradient id=%22g%22 x1=%220%22 y1=%220%22 x2=%221%22 y2=%221%22%3E%3Cstop offset=%220%25%22 stop-color=%22%23fed7aa%22/%3E%3Cstop offset=%22100%25%22 stop-color=%22%23fb923c%22/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width=%22150%22 height=%22150%22 rx=%2275%22 fill=%22url(%23g)%22/%3E%3Ccircle cx=%2275%22 cy=%2258%22 r=%2228%22 fill=%22%23fff%22 opacity=%220.9%22/%3E%3Cpath d=%22M25 120a50 34 0 1 1 100 0%22 fill=%22%23fff%22 opacity=%220.9%22/%3E%3C/svg%3E';
+            }
+        }
+        
+        function downloadReport(format) {
+            const childId = document.getElementById('childSelect').value;
+            if (!childId) {
+                showNotification('Pilih anak terlebih dahulu!', 'warning');
+                return;
+            }
+            
+            const period = document.getElementById('periodSelect').value || 7;
+            
+            // Show loading
+            const downloadBtn = document.getElementById('downloadBtn');
+            let originalText = null;
+            if (downloadBtn) {
+                originalText = downloadBtn.innerHTML;
+                downloadBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Generating...';
+                downloadBtn.disabled = true;
+            }
+            
+            fetch(`/api/parent/reports/${childId}/download`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + localStorage.getItem('access_token')
+                },
+                body: JSON.stringify({
+                    format: format,
+                    period: parseInt(period)
+                })
+            })
+            .then(response => {
+                if (response.ok) {
+                    return response.blob();
+                } else {
+                    throw new Error('Download failed');
+                }
+            })
+            .then(blob => {
+                // Create download link
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `laporan_anak_${format}_${new Date().toISOString().split('T')[0]}.${format}`;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+                
+                showNotification(`Laporan ${format.toUpperCase()} berhasil didownload!`, 'success');
+            })
+            .catch(error => {
+                showNotification('Error: ' + error.message, 'danger');
+            })
+            .finally(() => {
+                if (downloadBtn && originalText !== null) {
+                    downloadBtn.innerHTML = originalText;
+                    downloadBtn.disabled = false;
+                }
+            });
+        }
+        
+        function downloadChildReport(childId) {
+            const format = 'pdf'; // Default to PDF
+            const period = 30; // Last 30 days
+            
+            // Show loading
+            showNotification('Generating report...', 'info');
+            
+            fetch(`/api/parent/reports/${childId}/download`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + localStorage.getItem('access_token')
+                },
+                body: JSON.stringify({
+                    format: format,
+                    period: period
+                })
+            })
+            .then(response => {
+                if (response.ok) {
+                    return response.blob();
+                } else {
+                    throw new Error('Download failed');
+                }
+            })
+            .then(blob => {
+                // Create download link
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `laporan_anak_${format}_${new Date().toISOString().split('T')[0]}.${format}`;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+                
+                showNotification(`Laporan ${format.toUpperCase()} berhasil didownload!`, 'success');
+            })
+            .catch(error => {
+                showNotification('Error: ' + error.message, 'danger');
+            });
+        }
+        
+        // Sidebar toggle function
+        function toggleSidebar() {
+            const sidebar = document.querySelector('.sidebar');
+            const mainContent = document.querySelector('.main-content');
+            const sidebarToggle = document.getElementById('sidebarToggle');
+            
+            sidebar.classList.toggle('show');
+            mainContent.classList.toggle('sidebar-open');
+            
+            // Hide/show toggle button based on sidebar state
+            if (sidebar.classList.contains('show')) {
+                sidebarToggle.style.display = 'none';
+            } else {
+                sidebarToggle.style.display = 'flex';
+            }
+        }
+
+        // Function to update real-time emotion stats display
+        function updateRealtimeEmotionStats(data) {
+            try {
+                // Update emotion distribution chart if visible
+                if (typeof updateEmotionChart === 'function') {
+                    updateEmotionChart(data.emotion_stats);
+                }
+                
+                // Update confidence indicators
+                updateConfidenceIndicators(data.emotion_stats);
+                
+                // Update current emotion display
+                if (data.current_emotion) {
+                    updateCurrentEmotionDisplay(data.current_emotion, data.emotion_stats[data.current_emotion]);
+                }
+                
+            } catch (error) {
+                console.error('Error updating real-time emotion stats:', error);
+            }
+        }
+        
+        // Function to update confidence indicators
+        function updateConfidenceIndicators(emotionStats) {
+            const confidenceContainer = document.getElementById('confidenceIndicators');
+            if (!confidenceContainer) return;
+            
+            let html = '<h4>Indikator Kepercayaan Real-time</h4>';
+            
+            for (const [emotion, stats] of Object.entries(emotionStats)) {
+                const confidence = stats.avg_confidence || 0;
+                const confidencePercent = Math.round(confidence * 100);
+                const confidenceClass = confidence > 0.7 ? 'high' : confidence > 0.4 ? 'medium' : 'low';
+                
+                html += `
+                    <div class="confidence-item">
+                        <span class="emotion-label">${emotion}:</span>
+                        <div class="confidence-bar">
+                            <div class="confidence-fill ${confidenceClass}" style="width: ${confidencePercent}%"></div>
+                        </div>
+                        <span class="confidence-text">${confidencePercent}%</span>
+                    </div>
+                `;
+            }
+            
+            confidenceContainer.innerHTML = html;
+        }
+        
+        // Function to update current emotion display
+        function updateCurrentEmotionDisplay(emotion, stats) {
+            const currentEmotionDiv = document.getElementById('currentEmotion');
+            if (!currentEmotionDiv) return;
+            
+            const confidence = stats.avg_confidence || 0;
+            const confidencePercent = Math.round(confidence * 100);
+            
+            currentEmotionDiv.innerHTML = `
+                <div class="current-emotion-display">
+                    <h3>Emosi Saat Ini: ${emotion}</h3>
+                    <div class="confidence-info">
+                        <span>Kepercayaan: ${confidencePercent}%</span>
+                        <span>Total Deteksi: ${stats.count}</span>
+                    </div>
+                </div>
+            `;
+        }
+
+        function initializeRealtime(){
+            try{
+                const socket = io();
+                socket.on('connected', ()=>{
+                    console.log('WebSocket connected to server');
+                });
+                const token = localStorage.getItem('access_token');
+                console.log('Joining parent room with token:', token ? 'present' : 'missing');
+                socket.emit('join_parent', { token });
+                
+                socket.on('joined', (data) => {
+                    console.log('Successfully joined room:', data.room);
+                });
+                
+                socket.on('error', (data) => {
+                    console.error('WebSocket error:', data);
+                });
+                socket.on('emotion_log_created', (evt)=>{
+                    // Ignore updates that have no student/emotion to avoid useless redraws
+                    if(!evt || !evt.student_id || !evt.emotion){ return; }
+                    
+                    // Update confidence indicators with real-time detection
+                    if (evt.confidence_score) {
+                        const confidenceData = {
+                            [evt.emotion]: {
+                                count: 1,
+                                avg_confidence: evt.confidence_score,
+                                total_confidence: evt.confidence_score
+                            }
+                        };
+                        updateConfidenceIndicators(confidenceData);
+                        updateCurrentEmotionDisplay(evt.emotion, confidenceData[evt.emotion]);
+                    }
+                    
+                    // Refresh overall distribution (period from current reports if visible, else 1)
+                    const period = parseInt((document.getElementById('periodSelect')?.value)||'1',10);
+                    // Debounce-like minimal redraw: only update charts if visible and we have data
+                    fetchOverallDistribution(period);
+                    const childId = document.getElementById('childSelect')?.value;
+                    if(childId){ fetchChildDistribution(childId, period); }
+                    
+                    // Show real-time notification
+                    showRealtimeNotification({
+                        type: 'emotion_detected',
+                        message: `Emosi terdeteksi: ${evt.emotion} (${Math.round(evt.confidence_score * 100)}% confidence)`,
+                        emotion: evt.emotion,
+                        student_id: evt.student_id,
+                        confidence: evt.confidence_score
+                    });
+                });
+                
+                // Handle real-time emotion aggregation updates
+                socket.on('emotion_aggregation_update', (data) => {
+                    console.log('Emotion aggregation update:', data);
+                    
+                    // Update real-time emotion stats display
+                    updateRealtimeEmotionStats(data);
+                    
+                    // Update confidence indicators with real-time data
+                    if (data.emotion_stats) {
+                        updateConfidenceIndicators(data.emotion_stats);
+                    }
+                    
+                    // Update current emotion display
+                    if (data.current_emotion && data.emotion_stats[data.current_emotion]) {
+                        updateCurrentEmotionDisplay(data.current_emotion, data.emotion_stats[data.current_emotion]);
+                    }
+                    
+                    // Show aggregation notification if significant change
+                    if (data.total_detections > 0) {
+                        const dominantEmotion = Object.keys(data.emotion_stats).reduce((a, b) => 
+                            data.emotion_stats[a].count > data.emotion_stats[b].count ? a : b
+                        );
+                        
+                        showRealtimeNotification({
+                            type: 'emotion_summary',
+                            message: `Ringkasan emosi: ${dominantEmotion} (${data.total_detections} deteksi)`,
+                            emotion: dominantEmotion,
+                            student_id: data.student_id,
+                            stats: data.emotion_stats
+                        });
+                    }
+                });
+                
+                socket.on('child_activity', (data) => {
+                    showRealtimeNotification({
+                        type: 'child_activity',
+                        message: data.message,
+                        child_name: data.child_name
+                    });
+                });
+                
+                socket.on('session_update', (data) => {
+                    console.log('Received session_update:', data);
+                    showRealtimeNotification({
+                        type: 'session_update',
+                        message: data.message,
+                        session_name: data.session_name
+                    });
+                    
+                    // Refresh dashboard data ketika ada session update
+                    console.log('Refreshing dashboard data...');
+                    loadDashboardData();
+                    
+                    // Refresh children data untuk update chart dan stats
+                    console.log('Refreshing children data...');
+                    loadChildren();
+                });
+                
+                // Handle real-time confidence updates
+                socket.on('confidence_update', (data) => {
+                    console.log('Confidence update received:', data);
+                    
+                    // Update confidence indicators with real-time confidence data
+                    if (data.emotion_stats) {
+                        updateConfidenceIndicators(data.emotion_stats);
+                    }
+                    
+                    // Update current emotion display
+                    if (data.current_emotion && data.emotion_stats && data.emotion_stats[data.current_emotion]) {
+                        updateCurrentEmotionDisplay(data.current_emotion, data.emotion_stats[data.current_emotion]);
+                    }
+                    
+                    // Show confidence notification
+                    if (data.confidence_score && data.emotion) {
+                        showRealtimeNotification({
+                            type: 'confidence_update',
+                            message: `Confidence ${data.emotion}: ${Math.round(data.confidence_score * 100)}%`,
+                            emotion: data.emotion,
+                            confidence: data.confidence_score
+                        });
+                    }
+                });
+            }catch(e){ console.warn('socket init failed', e); }
+        }
+        
+        function showRealtimeNotification(data) {
+            // Create notification element
+            const notification = document.createElement('div');
+            notification.className = 'toast align-items-center text-white bg-primary border-0';
+            notification.setAttribute('role', 'alert');
+            notification.setAttribute('aria-live', 'assertive');
+            notification.setAttribute('aria-atomic', 'true');
+            
+            let iconClass = 'fas fa-bell';
+            let bgClass = 'bg-primary';
+            
+            if (data.type === 'emotion_detected') {
+                iconClass = 'fas fa-heart';
+                bgClass = 'bg-success';
+            } else if (data.type === 'child_activity') {
+                iconClass = 'fas fa-child';
+                bgClass = 'bg-info';
+            } else if (data.type === 'session_update') {
+                iconClass = 'fas fa-play';
+                bgClass = 'bg-warning';
+            }
+            
+            notification.innerHTML = `
+                <div class="d-flex">
+                    <div class="toast-body">
+                        <i class="${iconClass} me-2"></i>
+                        ${data.message}
+                    </div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                </div>
+            `;
+            
+            // Add to notification container
+            let container = document.getElementById('notificationContainer');
+            if (!container) {
+                container = document.createElement('div');
+                container.id = 'notificationContainer';
+                container.className = 'toast-container position-fixed top-0 end-0 p-3';
+                container.style.zIndex = '9999';
+                document.body.appendChild(container);
+            }
+            
+            container.appendChild(notification);
+            
+            // Show notification
+            const bsToast = new bootstrap.Toast(notification, {
+                autohide: true,
+                delay: 5000
+            });
+            bsToast.show();
+            
+            // Remove from DOM after hiding
+            notification.addEventListener('hidden.bs.toast', () => {
+                if (notification.parentNode) {
+                    notification.parentNode.removeChild(notification);
+                }
+            });
+        }
+
+        // Initialize distribution charts (overall & per-child)
+        function initializeDistributionCharts() {
+            const labels = ['happy','sad','angry','fear','surprise','disgust','neutral'];
+            const colors = ['#4CAF50','#2196F3','#F44336','#9C27B0','#FF9800','#795548','#607D8B'];
+
+            const overallCtx = document.getElementById('overallDistributionChart').getContext('2d');
+            overallDistributionChart = new Chart(overallCtx, {
+                type: 'doughnut',
+                data: { labels: labels.map(capitalize), datasets: [{ data: Array(labels.length).fill(0), backgroundColor: colors }] },
+                options: { responsive: true, maintainAspectRatio: false, rotation: -90, circumference: 180, plugins: { legend: { position: 'bottom' } } }
+            });
+
+            const childCtx = document.getElementById('childDistributionChart').getContext('2d');
+            childDistributionChart = new Chart(childCtx, {
+                type: 'bar',
+                data: { labels: labels.map(capitalize), datasets: [{ label: 'Jumlah', data: Array(labels.length).fill(0), backgroundColor: colors }] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision:0, stepSize: 1 }, grace: '10%' } } }
+            });
+
+            // Initial load for overall distribution (default 1 day)
+            fetchOverallDistribution(1);
+        }
+
+        function capitalize(s){ return s.charAt(0).toUpperCase() + s.slice(1); }
+
+        async function fetchOverallDistribution(period){
+            try{
+                const res = await fetch(`/api/parent/distribution?period=${period}`, { headers: { 'Authorization': 'Bearer ' + localStorage.getItem('access_token') } });
+                if(!res.ok) return;
+                const data = await res.json();
+                const dist = data.distribution || {};
+                const ordered = ['happy','sad','angry','fear','surprise','disgust','neutral'].map(k => dist[k] || 0);
+                if(overallDistributionChart){ overallDistributionChart.data.datasets[0].data = ordered; overallDistributionChart.update(); }
+            }catch(err){ console.error('fetchOverallDistribution error', err); }
+        }
+
+        async function fetchChildDistribution(childId, period){
+            try{
+                const res = await fetch(`/api/parent/child/${childId}/distribution?period=${period}`, { 
+                    headers: { 'Authorization': 'Bearer ' + localStorage.getItem('access_token') },
+                    signal: _loadReportsAbort ? _loadReportsAbort.signal : undefined
+                });
+                if(!res.ok) return;
+                const data = await res.json();
+                const dist = data.distribution || {};
+                const ordered = ['happy','sad','angry','fear','surprise','disgust','neutral'].map(k => dist[k] || 0);
+                const total = ordered.reduce((a,b)=>a+b,0);
+                if(total > 0 && childDistributionChart){
+                    childDistributionChart.data.datasets[0].data = ordered;
+                    childDistributionChart.update('none');
+                }
+                // Also render concise per-day dominant timeline under existing timeline if the same child/period is selected
+                if(Array.isArray(data.timeline)){
+                    const container = document.getElementById('emotionTimeline');
+                    if(!container) return;
+                    // Replace existing summary block
+                    let summary = document.getElementById('dailySummaryBlock');
+                    if(!summary){
+                        summary = document.createElement('div');
+                        summary.id = 'dailySummaryBlock';
+                        container.appendChild(summary);
+                    }
+                    summary.innerHTML = '';
+                    const title = document.createElement('h6');
+                    title.textContent = 'Ringkasan Harian (Emosi Dominan)';
+                    summary.appendChild(title);
+                    data.timeline.forEach(item => {
+                        const div = document.createElement('div');
+                        div.className = 'timeline-item';
+                        div.innerHTML = `<div class="d-flex justify-content-between align-items-center"><div><strong>${item.date}</strong></div><div><span class="emotion-badge emotion-${item.dominant || 'neutral'}">${(item.dominant || 'neutral')}</span></div></div>`;
+                        summary.appendChild(div);
+                    });
+                }
+            }catch(err){ 
+                if(err.name !== 'AbortError') {
+                    console.error('fetchChildDistribution error', err); 
+                }
+            }
+        }
+        
+        // Logout
+        // Profile management
+        function editProfile() {
+            // Get current user data
+            const user = JSON.parse(localStorage.getItem('user'));
+            
+            const modal = document.createElement('div');
+            modal.className = 'modal fade';
+            modal.id = 'editProfileModal';
+            modal.innerHTML = `
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">
+                                <i class="fas fa-user-edit me-2" style="color: #fb923c;"></i>Edit Profil
+                            </h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <form id="editProfileForm">
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
+                                        <label for="editFullName" class="form-label">Nama Lengkap</label>
+                                        <input type="text" class="form-control" id="editFullName" value="${user.full_name}" required>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="editEmail" class="form-label">Email</label>
+                                        <input type="email" class="form-control" id="editEmail" value="${user.email}" required>
+                                    </div>
+                                </div>
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
+                                        <label for="editPhone" class="form-label">No. Telepon</label>
+                                        <input type="tel" class="form-control" id="editPhone" value="${user.phone || ''}">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="editUsername" class="form-label">Username</label>
+                                        <input type="text" class="form-control" id="editUsername" value="${user.username}" readonly>
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="currentPassword" class="form-label">Password Saat Ini</label>
+                                    <input type="password" class="form-control" id="currentPassword" placeholder="Masukkan password saat ini">
+                                </div>
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
+                                        <label for="newPassword" class="form-label">Password Baru</label>
+                                        <input type="password" class="form-control" id="newPassword" placeholder="Masukkan password baru">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="confirmPassword" class="form-label">Konfirmasi Password</label>
+                                        <input type="password" class="form-control" id="confirmPassword" placeholder="Konfirmasi password baru">
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                            <button type="button" class="btn btn-primary" onclick="saveProfile()">
+                                <i class="fas fa-save me-2"></i>Simpan Perubahan
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            const bsModal = new bootstrap.Modal(modal);
+            bsModal.show();
+            
+            // Remove modal from DOM when hidden
+            modal.addEventListener('hidden.bs.modal', () => {
+                document.body.removeChild(modal);
+            });
+        }
+        
+        function saveProfile() {
+            const formData = {
+                full_name: document.getElementById('editFullName').value,
+                email: document.getElementById('editEmail').value,
+                phone: document.getElementById('editPhone').value,
+                current_password: document.getElementById('currentPassword').value,
+                new_password: document.getElementById('newPassword').value,
+                confirm_password: document.getElementById('confirmPassword').value
+            };
+            
+            // Validate form
+            if (!formData.full_name || !formData.email) {
+                showNotification('Nama lengkap dan email harus diisi!', 'warning');
+                return;
+            }
+            
+            if (formData.new_password && formData.new_password !== formData.confirm_password) {
+                showNotification('Password baru dan konfirmasi tidak sama!', 'warning');
+                return;
+            }
+            
+            // Show loading
+            const saveBtn = document.querySelector('#editProfileModal .btn-primary');
+            const originalText = saveBtn.innerHTML;
+            saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Menyimpan...';
+            saveBtn.disabled = true;
+            
+            fetch('/api/auth/profile', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + localStorage.getItem('access_token')
+                },
+                body: JSON.stringify(formData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    showNotification('Error: ' + data.error, 'danger');
+                } else {
+                    showNotification('Profil berhasil diperbarui!', 'success');
+                    
+                    // Update local storage
+                    const user = JSON.parse(localStorage.getItem('user'));
+                    user.full_name = formData.full_name;
+                    user.email = formData.email;
+                    user.phone = formData.phone;
+                    localStorage.setItem('user', JSON.stringify(user));
+                    
+                    // Update UI
+                    document.getElementById('userName').textContent = formData.full_name;
+                    
+                    // Close modal
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('editProfileModal'));
+                    modal.hide();
+                }
+            })
+            .catch(error => {
+                showNotification('Error: ' + error.message, 'danger');
+            })
+            .finally(() => {
+                saveBtn.innerHTML = originalText;
+                saveBtn.disabled = false;
+            });
+        }
+
+        // Enhanced Error Handling System
+        function showNotification(message, type = 'info', duration = 5000) {
+            const notification = document.createElement('div');
+            notification.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+            notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px; max-width: 400px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);';
+            
+            const icon = type === 'success' ? 'fa-check-circle' :
+                        type === 'danger' ? 'fa-exclamation-circle' :
+                        type === 'warning' ? 'fa-exclamation-triangle' :
+                        type === 'info' ? 'fa-info-circle' : 'fa-bell';
+            
+            notification.innerHTML = `
+                <div class="d-flex align-items-center">
+                    <i class="fas ${icon} me-2"></i>
+                    <div class="flex-grow-1">${message}</div>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            `;
+            
+            document.body.appendChild(notification);
+            
+            // Auto remove after specified duration
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.remove();
+                }
+            }, duration);
+        }
+
+        // Enhanced error handling
+        function handleApiError(error, context = '') {
+            console.error(`API Error ${context}:`, error);
+            let message = 'Terjadi kesalahan pada sistem';
+            
+            if (error.name === 'AbortError') {
+                // Request was aborted, don't show error
+                return;
+            } else if (error.response) {
+                // Server responded with error status
+                message = `Error ${error.response.status}: ${error.response.statusText}`;
+            } else if (error.request) {
+                // Request was made but no response received
+                message = 'Tidak dapat terhubung ke server';
+            } else {
+                // Something else happened
+                message = error.message || 'Terjadi kesalahan yang tidak diketahui';
+            }
+            
+            showNotification(message, 'danger', 8000);
+        }
+
+        // Global error handler for fetch requests
+        async function safeFetch(url, options = {}) {
+            try {
+                const response = await fetch(url, options);
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    const errorMessage = errorData.error || `HTTP ${response.status}: ${response.statusText}`;
+                    throw new Error(errorMessage);
+                }
+                return response;
+            } catch (error) {
+                handleApiError(error, `fetching ${url}`);
+                throw error;
+            }
+        }
+
+        // Loading state management
+        function showLoading(elementId, text = 'Memuat...') {
+            const element = document.getElementById(elementId);
+            if (!element) return;
+            // Jangan hancurkan konten section. Tambahkan overlay loading di atasnya
+            let overlay = element.querySelector('.section-loading');
+            if (!overlay) {
+                overlay = document.createElement('div');
+                overlay.className = 'section-loading';
+                overlay.innerHTML = `<i class="fas fa-spinner fa-spin me-2"></i>${text}`;
+                element.style.position = element.style.position || 'relative';
+                element.appendChild(overlay);
+            } else {
+                overlay.innerHTML = `<i class=\"fas fa-spinner fa-spin me-2\"></i>${text}`;
+                overlay.style.display = 'flex';
+            }
+        }
+
+        function hideLoading(elementId) {
+            const element = document.getElementById(elementId);
+            if (!element) return;
+            const overlay = element.querySelector('.section-loading');
+            if (overlay) {
+                overlay.remove();
+            }
+        }
+
+
+        // Removed duplicate fetchChildDistribution function
+
+        // Enhanced overall distribution fetching with error handling
+        async function fetchOverallDistribution(period) {
+            try {
+                const response = await safeFetch(`/api/parent/distribution?period=${period}`, {
+                    headers: { 
+                        'Authorization': 'Bearer ' + localStorage.getItem('access_token') 
+                    }
+                });
+                
+                if (!response.ok) return;
+                
+                const data = await response.json();
+                const dist = data.distribution || {};
+                const ordered = ['happy','sad','angry','fear','surprise','disgust','neutral'].map(k => dist[k] || 0);
+                
+                if (overallDistributionChart) {
+                    overallDistributionChart.data.datasets[0].data = ordered;
+                    overallDistributionChart.update();
+                }
+            } catch (error) {
+                console.error('fetchOverallDistribution error', error);
+                showNotification('Gagal memuat distribusi keseluruhan', 'warning');
+            }
+        }
+
+        // Enhanced download report with error handling
+        function downloadReport(format) {
+            const childId = document.getElementById('childSelect').value;
+            if (!childId) {
+                showNotification('Pilih anak terlebih dahulu!', 'warning');
+                return;
+            }
+            
+            const period = document.getElementById('periodSelect').value || 7;
+            
+            // Show loading
+            const downloadBtn = document.getElementById('downloadBtn');
+            const originalText = downloadBtn.innerHTML;
+            showLoading('downloadBtn', 'Generating...');
+            
+            fetch(`/api/parent/reports/${childId}/download`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + localStorage.getItem('access_token')
+                },
+                body: JSON.stringify({
+                    format: format,
+                    period: parseInt(period)
+                })
+            })
+            .then(response => {
+                if (response.ok) {
+                    return response.blob();
+                } else {
+                    return response.json().then(errorData => {
+                        throw new Error(errorData.error || 'Download failed');
+                    });
+                }
+            })
+            .then(blob => {
+                // Create download link
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `laporan_anak_${format}_${new Date().toISOString().split('T')[0]}.${format}`;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+                
+                showNotification(`Laporan ${format.toUpperCase()} berhasil didownload!`, 'success');
+            })
+            .catch(error => {
+                console.error('Download error:', error);
+                showNotification('Error: ' + error.message, 'danger');
+            })
+            .finally(() => {
+                hideLoading('downloadBtn', originalText);
+            });
+        }
+
+        // Enhanced child report download with error handling
+        function downloadChildReport(childId) {
+            const format = 'pdf'; // Default to PDF
+            const period = 30; // Last 30 days
+            
+            // Show loading
+            showNotification('Generating report...', 'info');
+            
+            fetch(`/api/parent/reports/${childId}/download`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + localStorage.getItem('access_token')
+                },
+                body: JSON.stringify({
+                    format: format,
+                    period: period
+                })
+            })
+            .then(response => {
+                if (response.ok) {
+                    return response.blob();
+                } else {
+                    return response.json().then(errorData => {
+                        throw new Error(errorData.error || 'Download failed');
+                    });
+                }
+            })
+            .then(blob => {
+                // Create download link
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `laporan_anak_${format}_${new Date().toISOString().split('T')[0]}.${format}`;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+                
+                showNotification(`Laporan ${format.toUpperCase()} berhasil didownload!`, 'success');
+            })
+            .catch(error => {
+                console.error('Download error:', error);
+                showNotification('Error: ' + error.message, 'danger');
+            });
+        }
+
+        // Enhanced profile management with error handling
+        function saveProfile() {
+            const formData = {
+                full_name: document.getElementById('editFullName').value,
+                email: document.getElementById('editEmail').value,
+                phone: document.getElementById('editPhone').value,
+                current_password: document.getElementById('currentPassword').value,
+                new_password: document.getElementById('newPassword').value,
+                confirm_password: document.getElementById('confirmPassword').value
+            };
+            
+            // Validate form
+            if (!formData.full_name || !formData.email) {
+                showNotification('Nama lengkap dan email harus diisi!', 'warning');
+                return;
+            }
+            
+            if (formData.new_password && formData.new_password !== formData.confirm_password) {
+                showNotification('Password baru dan konfirmasi tidak sama!', 'warning');
+                return;
+            }
+            
+            // Show loading
+            const saveBtn = document.querySelector('#editProfileModal .btn-primary');
+            const originalText = saveBtn.innerHTML;
+            showLoading('saveProfileBtn', 'Menyimpan...');
+            
+            fetch('/api/auth/profile', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + localStorage.getItem('access_token')
+                },
+                body: JSON.stringify(formData)
+            })
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(errorData => {
+                        throw new Error(errorData.error || 'Update failed');
+                    });
+                }
+                return response.json();
+            })
+            .then(data => {
+                showNotification('Profil berhasil diperbarui!', 'success');
+                
+                // Update local storage
+                const user = JSON.parse(localStorage.getItem('user'));
+                user.full_name = formData.full_name;
+                user.email = formData.email;
+                user.phone = formData.phone;
+                localStorage.setItem('user', JSON.stringify(user));
+                
+                // Update UI
+                document.getElementById('userName').textContent = formData.full_name;
+                
+                // Close modal
+                const modal = bootstrap.Modal.getInstance(document.getElementById('editProfileModal'));
+                modal.hide();
+            })
+            .catch(error => {
+                console.error('Profile update error:', error);
+                showNotification('Error: ' + error.message, 'danger');
+            })
+            .finally(() => {
+                hideLoading('saveProfileBtn', originalText);
+            });
+        }
+
+        // Global error handler for unhandled errors
+        window.addEventListener('error', function(event) {
+            console.error('Global error:', event.error);
+            showNotification('Terjadi kesalahan yang tidak terduga', 'danger');
+        });
+
+        // Global error handler for unhandled promise rejections
+        window.addEventListener('unhandledrejection', function(event) {
+            console.error('Unhandled promise rejection:', event.reason);
+            showNotification('Terjadi kesalahan pada operasi asinkron', 'danger');
+        });
+
+        function logout() {
+            localStorage.removeItem('access_token');
+            localStorage.removeItem('user');
+            window.location.href = '/login';
+        }
+    </script>
+</body>
+</html>
