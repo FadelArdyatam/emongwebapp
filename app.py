@@ -846,6 +846,43 @@ def get_config():
         'rtspUrl': (CURRENT_RTSP_URL[:15] + '...' if CURRENT_RTSP_URL else '')
     })
 
+@app.route('/config', methods=['POST'])
+def set_config():
+    """Update runtime configuration: camera source, RTSP URL, and detector backend.
+    Expected JSON body: {"cameraSource": "webcam"|"rtsp", "rtspUrl": string?, "detectorBackend": string?}
+    """
+    global CURRENT_CAM_SOURCE, CURRENT_RTSP_URL, CURRENT_DETECTOR_BACKEND
+    try:
+        data = request.get_json(silent=True) or {}
+
+        # camera source handling
+        camera_source = str(data.get('cameraSource', CURRENT_CAM_SOURCE)).lower()
+        if camera_source not in ('webcam', 'rtsp'):
+            return jsonify({'error': 'cameraSource harus webcam atau rtsp'}), 400
+        if camera_source == 'rtsp':
+            rtsp_url = str(data.get('rtspUrl', CURRENT_RTSP_URL)).strip()
+            if not rtsp_url:
+                return jsonify({'error': 'rtspUrl harus diisi untuk cameraSource=rtsp'}), 400
+            CURRENT_RTSP_URL = rtsp_url
+        CURRENT_CAM_SOURCE = camera_source
+
+        # detector backend (optional)
+        detector_backend = data.get('detectorBackend', None)
+        if detector_backend:
+            detector_backend = str(detector_backend).lower()
+            allowed = {'opencv', 'retinaface', 'mtcnn'}
+            if detector_backend in allowed:
+                CURRENT_DETECTOR_BACKEND = detector_backend
+
+        return jsonify({
+            'message': 'Configuration updated',
+            'cameraSource': CURRENT_CAM_SOURCE,
+            'rtspUrl': (CURRENT_RTSP_URL[:15] + '...' if CURRENT_RTSP_URL else ''),
+            'detectorBackend': CURRENT_DETECTOR_BACKEND
+        }), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/camera/source', methods=['POST'])
 def set_camera_source():
     """Set camera source at runtime. Body: {source:'webcam'|'rtsp', rtspUrl?:string}"""
