@@ -93,3 +93,50 @@
 
 # Custom ignores
 models/convertedmodels/
+
+# Environments & credentials
+.env
+.env.*
+.env.local
+.env.*.local
+.python-version
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# Test/coverage/build caches
+.pytest_cache/
+.cache/
+htmlcov/
+.coverage*
+dist/
+build/
+
+# Logs and temp files
+*.log
+*.csv
+*.tmp
+*.bak
+
+# Application runtime data
+uploads/
+gallery/
+known_faces/
+
+# Model/binary artifacts (prevent accidental commit)
+models/**/*.onnx
+models/**/*.pt
+models/**/*.pth
+models/**/*.bin
+models/**/*.weights
+models/**/*.ckpt
+models/**/*.tflite
+models/**/*.pb
+models/**/*.h5
+models/**/*.npy
+models/**/*.npz
