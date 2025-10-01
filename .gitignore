@@ -92,10 +92,6 @@
 # cython_debug/
 
 # Custom ignores
-models/convertedmodels/arcface.onnx
-models/convertedmodels/emotion.onnx
-models/convertedmodels/retinaface_mobilenet25.onnx
-models/convertedmodels/retinaface_resnet50.onnx
 
 # Environments & credentials
 .env
