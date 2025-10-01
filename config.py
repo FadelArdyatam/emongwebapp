@@ -31,3 +31,11 @@ class Config:
     # Upload Configuration
     UPLOAD_FOLDER = 'uploads'
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB max file size
+
+    # Model paths (can be overridden via env)
+    MODELS_BASE_DIR = os.getenv('MODELS_BASE_DIR', os.path.join(os.path.dirname(__file__), 'models'))
+    MODELS_CONVERTED_DIR = os.getenv('MODELS_CONVERTED_DIR', os.path.join(MODELS_BASE_DIR, 'convertedmodels'))
+    ARCFACE_MODEL_PATH = os.getenv('ARCFACE_MODEL_PATH', os.path.join(MODELS_CONVERTED_DIR, 'arcface.onnx'))
+    EMOTION_MODEL_PATH = os.getenv('EMOTION_MODEL_PATH', os.path.join(MODELS_CONVERTED_DIR, 'emotion.onnx'))
+    RETINAFACE_MNV2_PATH = os.getenv('RETINAFACE_MNV2_PATH', os.path.join(MODELS_CONVERTED_DIR, 'retinaface_mobilenet25.onnx'))
+    RETINAFACE_RES50_PATH = os.getenv('RETINAFACE_RES50_PATH', os.path.join(MODELS_CONVERTED_DIR, 'retinaface_resnet50.onnx'))

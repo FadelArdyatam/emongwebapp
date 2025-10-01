@@ -1370,8 +1370,9 @@
                                                 <i class="fas fa-search me-1" style="color: #fb923c;"></i>Detector:
                                             </label>
                                             <select id="dgDetectorBackend" class="form-select form-select-sm" style="width:auto;">
-                                                <option value="opencv">🔍 OpenCV</option>
+                                                <option value="retinaface_onnx">⚡ RetinaFace (ONNX)</option>
                                                 <option value="retinaface">🎯 RetinaFace</option>
+                                                <option value="opencv">🔍 OpenCV</option>
                                                 <option value="mtcnn">📐 MTCNN</option>
                                             </select>
                                         </div>
@@ -2753,7 +2754,15 @@
                         // Switch back to webcam
                         switchToWebcam();
                     }
+                    // Update detector backend (including onnx option)
+                    return fetch('/detector/backend', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ backend: detectorBackend })
+                    });
                 }
+            }).then(() => {
+                // No-op
             }).catch(e => {
                 showNotification('Error menyimpan pengaturan kamera: ' + e.message, 'danger');
             });

@@ -14,6 +14,9 @@ import numpy as np
 import logging
 from collections import deque, Counter
 from deepface import DeepFace
+from services.detector_retinaface_onnx import extract_faces_with_retinaface_onnx
+from services.onnx_runtime_service import init_onnx_models, arcface_embed, predict_emotion
+from services.embedding_cache import EmbeddingCache
 from config import Config
 from models import db, User, Student, EmotionSession, EmotionLog, StudentTeacher, StudentParent
 from auth import auth_bp, require_role
@@ -141,7 +144,30 @@ CURRENT_CAM_SOURCE = CAM_SOURCE
 CURRENT_RTSP_URL = RTSP_URL_ENV
 
 # Runtime-overridable detector backend
-CURRENT_DETECTOR_BACKEND = 'mtcnn'  # MTCNN lebih akurat dari opencv untuk real-time
+CURRENT_DETECTOR_BACKEND = 'mtcnn'  # 'mtcnn' | 'opencv' | 'retinaface' | 'retinaface_onnx'
+USE_ONNX_INFERENCE = os.environ.get('USE_ONNX_INFERENCE', 'false').lower() == 'true'
+
+def _extract_faces_adapter(frame):
+    """Unified face extraction with optional RetinaFace ONNX backend.
+    Returns DeepFace-like detections list.
+    """
+    backend = str(CURRENT_DETECTOR_BACKEND).lower()
+    # Try RetinaFace ONNX backend via OpenCV DNN if selected
+    if backend == 'retinaface_onnx':
+        detections = extract_faces_with_retinaface_onnx(frame)
+        if detections is not None:
+            return detections
+        # If model not available or error, gracefully fallback to DeepFace
+    # Default: use DeepFace extract_faces
+    try:
+        return DeepFace.extract_faces(
+            img_path=frame,
+            detector_backend='retinaface' if backend == 'retinaface_onnx' else backend,
+            align=True,
+            enforce_detection=False
+        )
+    except Exception:
+        return []
 
 # Debug: Print configuration on startup
 print(f"API_BASE_URL configured as: {API_BASE_URL}")
@@ -166,6 +192,29 @@ KNOWN_FACES_DIR = os.path.join(BASE_DIR, 'known_faces')
 os.makedirs(UPLOADS_DIR, exist_ok=True)
 os.makedirs(GALLERY_DIR, exist_ok=True)
 os.makedirs(KNOWN_FACES_DIR, exist_ok=True)
+
+# Initialize ONNX models if enabled
+MODELS_CONVERTED_DIR = Config.MODELS_CONVERTED_DIR
+if USE_ONNX_INFERENCE:
+    try:
+        init_onnx_models(
+            MODELS_CONVERTED_DIR,
+            arcface_path=Config.ARCFACE_MODEL_PATH,
+            emotion_path=Config.EMOTION_MODEL_PATH
+        )
+        print("ONNX models initialized")
+    except Exception as e:
+        print(f"ONNX init failed (fallback to DeepFace): {e}")
+        USE_ONNX_INFERENCE = False
+
+# Global embedding cache for gallery (used in streaming)
+EMBED_CACHE = EmbeddingCache(KNOWN_FACES_DIR)
+if USE_ONNX_INFERENCE:
+    try:
+        count = EMBED_CACHE.build_cache()
+        print(f"Embedding cache built: {count} images")
+    except Exception as e:
+        print(f"Embedding cache build failed: {e}")
 
 # Session tracking (per-process simple approach)
 SESSION_START_TS = None
@@ -445,29 +494,33 @@ def generate_frames():
                     emotion = api_result['emotion']
                     print(f"🎯 Emotion dari Colab: {emotion}")
                 else:
-                    # Fallback to local DeepFace jika ngrok gagal
-                    print("🔄 Fallback ke local processing...")
-                    result = DeepFace.analyze(
-                        frame,
-                        actions=['emotion', 'age', 'gender', 'race'],
-                        detector_backend=CURRENT_DETECTOR_BACKEND,
-                        enforce_detection=False,
-                        silent=True
-                    )
-                    emotion = result[0]['dominant_emotion']
+                    print("🔄 Fallback ke local ONNX...")
+                    detections = _extract_faces_adapter(frame)
+                    emos = []
+                    for det in detections:
+                        face_img = det.get('face')
+                        if face_img is None:
+                            continue
+                        face_bgr = (face_img[:, :, ::-1] * 255).astype('uint8')
+                        emo_pred = predict_emotion(face_bgr)
+                        if emo_pred:
+                            emos.append(emo_pred['emotion'])
+                    emotion = Counter(emos).most_common(1)[0][0] if emos else 'unknown'
             else:
-                # Use local DeepFace untuk frame lainnya
-                if frame_count % 10 == 0:  # Proses setiap 5 frame untuk akurasi lebih baik
-                    result = DeepFace.analyze(
-                        frame,
-                        actions=['emotion', 'age', 'gender', 'race'],
-                        detector_backend=CURRENT_DETECTOR_BACKEND,
-                        enforce_detection=False,
-                        silent=True
-                    )
-                    emotion = result[0]['dominant_emotion']
+                # Local ONNX untuk frame lainnya
+                if frame_count % 10 == 0:
+                    detections = _extract_faces_adapter(frame)
+                    emos = []
+                    for det in detections:
+                        face_img = det.get('face')
+                        if face_img is None:
+                            continue
+                        face_bgr = (face_img[:, :, ::-1] * 255).astype('uint8')
+                        emo_pred = predict_emotion(face_bgr)
+                        if emo_pred:
+                            emos.append(emo_pred['emotion'])
+                    emotion = Counter(emos).most_common(1)[0][0] if emos else 'unknown'
                 else:
-                    # Gunakan emotion terakhir jika tidak memproses frame ini
                     emotion = emotion_history[-1] if emotion_history else "unknown"
             
             emotion_history.append(emotion)
@@ -490,16 +543,11 @@ def generate_frames():
             cv2.putText(frame, f'Error: {str(e)[:30]}...', (30, 50),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
 
-        # Periodically run face recognition (1:N) against gallery
+        # Periodically run face recognition (1:N) against gallery using ONNX cache
         try:
             if frame_count % recognition_interval_frames == 0:
                 # Detect faces and use cropped ROI(s) for matching to handle small/distant faces
-                detections = DeepFace.extract_faces(
-                    img_path=frame,
-                    detector_backend=CURRENT_DETECTOR_BACKEND,
-                    align=True,
-                    enforce_detection=False
-                )
+                detections = _extract_faces_adapter(frame)
                 roi_list = []
                 for det in detections:
                     face_img = det.get('face')
@@ -513,35 +561,19 @@ def generate_frames():
                     roi_list = [frame]
 
                 best_name = "Unknown"
-                best_distance = None
-                threshold = 0.6  # Threshold lebih tinggi untuk akurasi lebih baik
+                best_sim = None
+                sim_threshold = 0.45
                 for roi in roi_list:
-                    results = DeepFace.find(
-                        roi,
-                        db_path=KNOWN_FACES_DIR,
-                        model_name='ArcFace',
-                        detector_backend=CURRENT_DETECTOR_BACKEND,
-                        distance_metric='cosine',
-                        enforce_detection=False,
-                        silent=True
-                    )
-                    df = results[0] if isinstance(results, list) else results
-                    if df is not None and hasattr(df, 'empty') and not df.empty:
-                        top = df.iloc[0]
-                        identity_path = str(top.get('identity', ''))
-                        distance = top.get('distance', None)
-                        if identity_path:
-                            try:
-                                person_name = os.path.basename(os.path.dirname(identity_path))
-                            except Exception:
-                                person_name = os.path.splitext(os.path.basename(identity_path))[0]
-                            if distance is None or distance <= threshold:
-                                if best_distance is None or (distance is not None and distance < best_distance):
-                                    best_name = person_name
-                                    best_distance = distance
-                if best_distance is not None:
+                    emb = arcface_embed(roi)
+                    if emb is None:
+                        continue
+                    sid, sim = EMBED_CACHE.best_match(emb)
+                    if sid is not None and (best_sim is None or sim > best_sim):
+                        best_name = sid
+                        best_sim = sim
+                if best_sim is not None and best_sim >= sim_threshold:
                     recognized_label = best_name
-                    recognized_distance = best_distance
+                    recognized_distance = 1.0 - float(best_sim)
                 else:
                     recognized_label = "Unknown"
                     recognized_distance = None
@@ -870,7 +902,7 @@ def set_config():
         detector_backend = data.get('detectorBackend', None)
         if detector_backend:
             detector_backend = str(detector_backend).lower()
-            allowed = {'opencv', 'retinaface', 'mtcnn'}
+            allowed = {'opencv', 'retinaface', 'mtcnn', 'retinaface_onnx'}
             if detector_backend in allowed:
                 CURRENT_DETECTOR_BACKEND = detector_backend
 
@@ -905,7 +937,7 @@ def set_camera_source():
 @app.route('/detector/backend', methods=['GET'])
 def get_detector_backend():
     """Get current detector backend"""
-    return jsonify({'detectorBackend': CURRENT_DETECTOR_BACKEND}), 200
+    return jsonify({'detectorBackend': CURRENT_DETECTOR_BACKEND, 'useOnnx': bool(USE_ONNX_INFERENCE)}), 200
 
 @app.route('/face/clustering', methods=['GET'])
 def get_face_clustering():
@@ -1069,13 +1101,13 @@ def analyze_multi_person():
 
 @app.route('/detector/backend', methods=['POST'])
 def set_detector_backend():
-    """Set detector backend at runtime. Body: {backend:'opencv'|'retinaface'|'mtcnn'}"""
+    """Set detector backend at runtime. Body: {backend:'opencv'|'retinaface'|'mtcnn'|'retinaface_onnx'}"""
     global CURRENT_DETECTOR_BACKEND
     try:
         data = request.get_json() or {}
         backend = str(data.get('backend', CURRENT_DETECTOR_BACKEND)).lower()
-        if backend not in ('opencv', 'retinaface', 'mtcnn'):
-            return jsonify({'error': 'backend harus opencv, retinaface, atau mtcnn'}), 400
+        if backend not in ('opencv', 'retinaface', 'mtcnn', 'retinaface_onnx'):
+            return jsonify({'error': 'backend harus opencv, retinaface, mtcnn, atau retinaface_onnx'}), 400
         CURRENT_DETECTOR_BACKEND = backend
         print(f"🔍 Detector backend changed to: {backend}")
         return jsonify({'message': 'Detector backend updated', 'detectorBackend': CURRENT_DETECTOR_BACKEND}), 200
@@ -1109,12 +1141,7 @@ def analyze_emotion():
         # Detect faces and analyze emotion per face + identify student by known_faces folder name
         detections = []
         try:
-            faces = DeepFace.extract_faces(
-                img_path=frame,
-                detector_backend=CURRENT_DETECTOR_BACKEND,
-                align=True,
-                enforce_detection=False
-            )
+            faces = _extract_faces_adapter(frame)
         except Exception:
             faces = []
 
@@ -1127,13 +1154,22 @@ def analyze_emotion():
                     continue
                 # Convert aligned face back to BGR uint8 for analysis
                 face_bgr = (face_img[:, :, ::-1] * 255).astype('uint8')
-                analysis = DeepFace.analyze(
-                    face_bgr,
-            actions=['emotion', 'age', 'gender', 'race'],
-            detector_backend=CURRENT_DETECTOR_BACKEND,
-            enforce_detection=False,
-            silent=True
-        )
+                analysis = None
+                if USE_ONNX_INFERENCE:
+                    emo_pred = predict_emotion(face_bgr)
+                    if emo_pred:
+                        analysis = [{
+                            'dominant_emotion': emo_pred['emotion'],
+                            'emotion': emo_pred.get('scores', {})
+                        }]
+                if analysis is None:
+                    analysis = DeepFace.analyze(
+                        face_bgr,
+                        actions=['emotion'],
+                        detector_backend='skip',
+                        enforce_detection=False,
+                        silent=True
+                    )
                 emo = None
                 try:
                     emo = analysis[0]['dominant_emotion']
@@ -1144,25 +1180,57 @@ def analyze_emotion():
                 identity = None
                 distance = None
                 try:
-                    search = DeepFace.find(
-                        face_bgr,
-                        db_path=KNOWN_FACES_DIR,
-                        model_name='ArcFace',
-                        detector_backend='skip',  # Skip detection since face is already extracted
-                        distance_metric='cosine',
-                        enforce_detection=False,
-                        silent=True
-                    )
-                    df = search[0] if isinstance(search, list) else search
-                    if df is not None and hasattr(df, 'empty') and not df.empty:
-                        top = df.iloc[0]
-                        identity_path = str(top.get('identity', ''))
-                        distance = float(top.get('distance', None)) if top.get('distance', None) is not None else None
-                        if identity_path:
-                            try:
-                                identity = os.path.basename(os.path.dirname(identity_path))
-                            except Exception:
-                                identity = os.path.splitext(os.path.basename(identity_path))[0]
+                    identity = None
+                    distance = None
+                    if USE_ONNX_INFERENCE:
+                        emb = arcface_embed(face_bgr)
+                        if emb is not None:
+                            best_id = None
+                            best_sim = -1.0
+                            for student_code in os.listdir(KNOWN_FACES_DIR):
+                                student_dir = os.path.join(KNOWN_FACES_DIR, student_code)
+                                if not os.path.isdir(student_dir):
+                                    continue
+                                for fn in os.listdir(student_dir):
+                                    if not fn.lower().endswith((".jpg", ".jpeg", ".png")):
+                                        continue
+                                    img_path = os.path.join(student_dir, fn)
+                                    try:
+                                        img = cv2.imread(img_path)
+                                        if img is None:
+                                            continue
+                                        e2 = arcface_embed(img)
+                                        if e2 is None:
+                                            continue
+                                        sim = float(np.dot(emb, e2) / (np.linalg.norm(emb) * np.linalg.norm(e2) + 1e-6))
+                                        if sim > best_sim:
+                                            best_sim = sim
+                                            best_id = student_code
+                                    except Exception:
+                                        continue
+                            if best_id is not None:
+                                identity = best_id
+                                distance = 1.0 - best_sim
+                    if identity is None:
+                        search = DeepFace.find(
+                            face_bgr,
+                            db_path=KNOWN_FACES_DIR,
+                            model_name='ArcFace',
+                            detector_backend='skip',
+                            distance_metric='cosine',
+                            enforce_detection=False,
+                            silent=True
+                        )
+                        df = search[0] if isinstance(search, list) else search
+                        if df is not None and hasattr(df, 'empty') and not df.empty:
+                            top = df.iloc[0]
+                            identity_path = str(top.get('identity', ''))
+                            distance = float(top.get('distance', None)) if top.get('distance', None) is not None else None
+                            if identity_path:
+                                try:
+                                    identity = os.path.basename(os.path.dirname(identity_path))
+                                except Exception:
+                                    identity = os.path.splitext(os.path.basename(identity_path))[0]
                 except Exception as _:
                     pass
 
