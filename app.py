@@ -130,6 +130,24 @@ ws_service = init_websocket_service(socketio, redis_client)
 compression_service = init_data_compression_service(db)
 init_services(db, redis_client, socketio)
 
+# Auto-start emotion stream worker if Redis available
+worker_thread = None
+worker_stop_event = None
+if redis_client:
+    import threading
+    from workers.emotion_stream_worker import main as worker_main
+    
+    def run_worker():
+        try:
+            worker_main()
+        except Exception as e:
+            print(f"Worker error: {e}")
+    
+    worker_stop_event = threading.Event()
+    worker_thread = threading.Thread(target=run_worker, daemon=True)
+    worker_thread.start()
+    print("✅ Emotion stream worker started automatically")
+
 # Register blueprints
 app.register_blueprint(auth_bp, url_prefix='/api/auth')
 app.register_blueprint(api_bp)  # Optimized API routes
@@ -1325,6 +1343,20 @@ def analyze_emotion():
                         if not student:
                             continue
                         
+                        # Publish to Redis Streams for downstream processing
+                        try:
+                            from services.redis_streams import publish_emotion_event
+                            publish_emotion_event(
+                                redis_client,
+                                student_id=student.id,
+                                emotion=d['emotion'],
+                                confidence=confidence_score if 'confidence_score' in locals() else None,
+                                detected_at_iso=datetime.utcnow().isoformat(),
+                                extra={'source': 'onnx', 'session_id': session_row.id}
+                            )
+                        except Exception:
+                            pass
+
                         # Send individual emotion detection
                         _emit_emotion_to_parents(student.id, d['emotion'], datetime.utcnow().isoformat())
                         

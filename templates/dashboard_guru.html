@@ -1208,6 +1208,37 @@
                 
                 <!-- Home Section -->
                 <div id="homeSection" class="section">
+                    <!-- System Health Indicators -->
+                    <div class="row g-4 mb-4">
+                        <div class="col-lg-6">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h6 class="card-title"><i class="fas fa-stream me-2"></i>Redis Streams Status</h6>
+                                    <div id="stream-health">
+                                        <span class="badge bg-secondary">Loading...</span>
+                                    </div>
+                                    <div class="mt-2">
+                                        <small class="text-muted">Worker: </small>
+                                        <span id="worker-status" class="badge bg-secondary">Loading...</span>
+                                        <button id="restart-worker-btn" class="btn btn-sm btn-outline-primary ms-2" onclick="restartWorker()" style="display:none;">
+                                            <i class="fas fa-redo me-1"></i>Restart
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-6">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h6 class="card-title"><i class="fas fa-brain me-2"></i>Mental Health Trend (Student ID: 1)</h6>
+                                    <div id="mental-trend">
+                                        <div class="text-muted">Loading...</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Statistics Cards -->
                     <div class="row g-4 mb-4">
                         <div class="col-lg-3 col-md-6">
@@ -3241,6 +3272,97 @@
             }).join('');
         }
         
+    </script>
+
+    <script>
+        async function fetchStreamHealth() {
+            try {
+                const res = await fetch('/api/v2/debug/stream/health', { credentials: 'include' });
+                const data = await res.json();
+                const el = document.getElementById('stream-health');
+                if (!el) return;
+                if (data.error || data.status === 'redis_unavailable') {
+                    el.innerHTML = '<span class="badge bg-danger">Streams: Unavailable</span>';
+                    return;
+                }
+                const length = data.length ?? 'N/A';
+                const pending = data.pending ?? 'N/A';
+                el.innerHTML = `<span class="badge bg-${pending && pending > 0 ? 'warning' : 'success'}">Streams: ok | len=${length} | pend=${pending}</span>`;
+            } catch (e) {
+                const el = document.getElementById('stream-health');
+                if (el) el.innerHTML = '<span class="badge bg-danger">Streams: Error</span>';
+            }
+        }
+
+        async function fetchWorkerStatus() {
+            try {
+                const res = await fetch('/api/v2/debug/worker/status', { credentials: 'include' });
+                const data = await res.json();
+                const el = document.getElementById('worker-status');
+                const btn = document.getElementById('restart-worker-btn');
+                if (!el) return;
+                
+                if (data.status === 'running') {
+                    el.innerHTML = '<span class="badge bg-success">Running</span>';
+                    if (btn) btn.style.display = 'inline-block';
+                } else {
+                    el.innerHTML = '<span class="badge bg-danger">Stopped</span>';
+                    if (btn) btn.style.display = 'inline-block';
+                }
+            } catch (e) {
+                const el = document.getElementById('worker-status');
+                if (el) el.innerHTML = '<span class="badge bg-warning">Unknown</span>';
+            }
+        }
+
+        async function restartWorker() {
+            try {
+                const res = await fetch('/api/v2/debug/worker/restart', { 
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    alert('Worker restarted successfully');
+                    fetchWorkerStatus();
+                } else {
+                    alert('Failed to restart worker: ' + (data.error || 'Unknown error'));
+                }
+            } catch (e) {
+                alert('Error restarting worker: ' + e.message);
+            }
+        }
+
+        async function fetchMentalTrend(studentId, days = 7) {
+            try {
+                const res = await fetch(`/api/v2/mental/score?student_id=${studentId}&days=${days}`, { credentials: 'include' });
+                const data = await res.json();
+                const el = document.getElementById('mental-trend');
+                if (!el) return;
+                if (!data.trend) {
+                    el.innerHTML = '<div class="text-muted">Tidak ada data risiko</div>';
+                    return;
+                }
+                const points = data.trend.map(t => `${t.date}: ${t.score} (${t.band})`).join('<br/>');
+                el.innerHTML = `<div class="small">${points}</div>`;
+            } catch (e) {
+                const el = document.getElementById('mental-trend');
+                if (el) el.innerHTML = '<div class="text-danger">Gagal memuat tren risiko</div>';
+            }
+        }
+
+        // Initialize indicators if containers exist
+        document.addEventListener('DOMContentLoaded', () => {
+            fetchStreamHealth();
+            fetchWorkerStatus();
+            // TODO: ganti 1 ke student id yang dipilih pada UI
+            fetchMentalTrend(1, 7);
+            setInterval(() => {
+                fetchStreamHealth();
+                fetchWorkerStatus();
+            }, 15000);
+        });
     </script>
 </body>
 </html>

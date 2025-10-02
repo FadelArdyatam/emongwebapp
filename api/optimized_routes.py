@@ -2,6 +2,8 @@
 Optimized API Routes dengan caching dan bulk operations
 """
 from flask import Blueprint, request, jsonify
+from datetime import datetime
+import os
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from services.database_service import DatabaseService
 from services.websocket_service import websocket_service
@@ -22,6 +24,88 @@ def init_services(db, redis_client, socketio):
     global db_service, ws_service
     db_service = DatabaseService(db, redis_client)
     ws_service = websocket_service
+
+
+@api_bp.route('/debug/stream/publish', methods=['POST'])
+def debug_stream_publish():
+    """Publish a test emotion event into the stream."""
+    if not db_service or not db_service.redis:
+        return jsonify({'error': 'Redis not available'}), 503
+    data = request.get_json(silent=True) or {}
+    student_id = data.get('student_id', 0)
+    emotion = data.get('emotion', 'neutral')
+    confidence = data.get('confidence')
+    detected_at = data.get('detected_at') or datetime.utcnow().isoformat()
+
+    try:
+        from services.redis_streams import publish_emotion_event
+        publish_emotion_event(
+            db_service.redis,
+            student_id=int(student_id),
+            emotion=emotion,
+            confidence=confidence,
+            detected_at_iso=detected_at,
+            extra={'source': 'debug-api'}
+        )
+        return jsonify({'status': 'ok'}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@api_bp.route('/debug/stream/health', methods=['GET'])
+def debug_stream_health():
+    if not db_service or not db_service.redis:
+        return jsonify({'status': 'redis_unavailable'}), 503
+    try:
+        stream = os.environ.get('EMOTION_STREAM', 'emotion-events')
+        group = os.environ.get('EMOTION_GROUP', 'emotion-workers')
+        
+        # Check if stream exists
+        try:
+            info = db_service.redis.xinfo_stream(stream)
+            stream_exists = True
+        except Exception:
+            info = None
+            stream_exists = False
+        
+        # Check groups if stream exists
+        groups = []
+        group_info = None
+        if stream_exists:
+            try:
+                groups = db_service.redis.xinfo_groups(stream)
+                for g in groups:
+                    if g.get('name') == group:
+                        group_info = g
+                        break
+            except Exception:
+                groups = []
+        
+        payload = {
+            'stream': stream,
+            'stream_exists': stream_exists,
+            'length': info.get('length') if info and isinstance(info, dict) else 0,
+            'groups': groups,
+            'group_info': group_info,
+        }
+        
+        # pending metrics
+        if stream_exists and group_info:
+            try:
+                pend = db_service.redis.xpending(stream, group)
+                if isinstance(pend, dict):
+                    payload['pending'] = pend.get('pending')
+                else:
+                    payload['pending'] = pend[0] if isinstance(pend, (list, tuple)) and pend else 0
+            except Exception:
+                payload['pending'] = 0
+        else:
+            payload['pending'] = 0
+            
+        return jsonify(payload), 200
+    except Exception as e:
+        logger.error(f"Stream health error: {e}")
+        return jsonify({'error': str(e)}), 500
 
 def require_role(roles):
     """Role-based access control decorator"""
@@ -187,6 +271,49 @@ def get_emotion_analytics():
         logger.error(f"Emotion analytics error: {e}")
         return jsonify({'error': str(e)}), 500
 
+
+@api_bp.route('/mental/score')
+@jwt_required()
+@require_role(['guru', 'admin'])
+def get_mental_score():
+    """Get daily risk score trend for a student."""
+    try:
+        student_id = request.args.get('student_id', type=int)
+        days = request.args.get('days', 7, type=int)
+        if not student_id:
+            return jsonify({'error': 'student_id is required'}), 400
+
+        if not db_service or not db_service.redis:
+            return jsonify({'error': 'Redis not available'}), 503
+
+        from datetime import datetime, timedelta
+        today = datetime.utcnow().date()
+        out = []
+        for i in range(days):
+            day = today - timedelta(days=i)
+            key = f"risk:student:{student_id}:{day.isoformat()}"
+            r = db_service.redis.hgetall(key)
+            if r:
+                try:
+                    out.append({
+                        'date': day.isoformat(),
+                        'score': float(r.get('score', 0)),
+                        'band': r.get('band', 'low'),
+                        'ratio_negative': float(r.get('ratio_negative', 0)),
+                        'ratio_neutral': float(r.get('ratio_neutral', 0)),
+                        'ratio_positive': float(r.get('ratio_positive', 0)),
+                        'total': int(r.get('total', 0)),
+                    })
+                except Exception:
+                    pass
+
+        # sort ascending by date
+        out.sort(key=lambda x: x['date'])
+        return jsonify({'student_id': student_id, 'days': days, 'trend': out}), 200
+    except Exception as e:
+        logger.error(f"Mental score error: {e}")
+        return jsonify({'error': str(e)}), 500
+
 @api_bp.route('/system/health')
 @jwt_required()
 @require_role(['admin'])
@@ -235,4 +362,47 @@ def clear_cache():
             
     except Exception as e:
         logger.error(f"Clear cache error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@api_bp.route('/debug/worker/status', methods=['GET'])
+def get_worker_status():
+    """Get worker status"""
+    try:
+        # Check if worker thread exists and is alive
+        from app import worker_thread
+        if worker_thread and worker_thread.is_alive():
+            status = 'running'
+        else:
+            status = 'stopped'
+        
+        return jsonify({
+            'status': status,
+            'thread_alive': worker_thread.is_alive() if worker_thread else False
+        }), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@api_bp.route('/debug/worker/restart', methods=['POST'])
+@jwt_required()
+@require_role(['admin'])
+def restart_worker():
+    """Restart worker (admin only)"""
+    try:
+        import threading
+        from workers.emotion_stream_worker import main as worker_main
+        from app import worker_thread, worker_stop_event
+        
+        def run_worker():
+            try:
+                worker_main()
+            except Exception as e:
+                logger.error(f"Worker error: {e}")
+        
+        # Start new worker thread
+        new_thread = threading.Thread(target=run_worker, daemon=True)
+        new_thread.start()
+        
+        return jsonify({'message': 'Worker restarted successfully'}), 200
+    except Exception as e:
+        logger.error(f"Worker restart error: {e}")
         return jsonify({'error': str(e)}), 500
