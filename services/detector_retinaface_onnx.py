@@ -14,15 +14,33 @@ def _lazy_session(model_path: str):
     try:
         import onnxruntime as ort  # type: ignore
     except Exception as e:
+        print(f"❌ ONNX Runtime tidak tersedia untuk RetinaFace: {e}")
         return None
     if not os.path.isfile(model_path):
+        print(f"❌ RetinaFace model tidak ditemukan: {model_path}")
         return None
+    
     providers = ["CPUExecutionProvider"]
-    if "CUDAExecutionProvider" in getattr(ort, "get_available_providers", lambda: [])():
+    available_providers = getattr(ort, "get_available_providers", lambda: [])()
+    gpu_available = "CUDAExecutionProvider" in available_providers
+    
+    if gpu_available:
         providers.insert(0, "CUDAExecutionProvider")
+        print("🚀 RetinaFace ONNX: GPU (CUDA) tersedia dan akan digunakan")
+    else:
+        print("⚠️  RetinaFace ONNX: GPU tidak tersedia, menggunakan CPU")
+    
+    print(f"   Available providers: {available_providers}")
+    print(f"   Using providers: {providers}")
+    
     try:
         _retina_sess = ort.InferenceSession(model_path, providers=providers)
-    except Exception:
+        actual_providers = _retina_sess.get_providers()
+        print(f"✅ RetinaFace model loaded successfully")
+        print(f"   Model: {os.path.basename(model_path)}")
+        print(f"   Active providers: {actual_providers}")
+    except Exception as e:
+        print(f"❌ Failed to load RetinaFace model: {e}")
         _retina_sess = None
     return _retina_sess
 

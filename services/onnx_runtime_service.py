@@ -31,21 +31,44 @@ def init_onnx_models(models_dir: str, arcface_path: Optional[str] = None, emotio
     emotion_path = emotion_path or os.path.join(models_dir, "emotion.onnx")
 
     providers = ["CPUExecutionProvider"]
-    if hasattr(ort, "get_available_providers") and "CUDAExecutionProvider" in ort.get_available_providers():
+    available_providers = []
+    if hasattr(ort, "get_available_providers"):
+        available_providers = ort.get_available_providers()
+        
+    # Check for GPU availability and log status
+    gpu_available = "CUDAExecutionProvider" in available_providers
+    if gpu_available:
         providers.insert(0, "CUDAExecutionProvider")
+        print("🚀 ONNX Runtime: GPU (CUDA) tersedia dan akan digunakan")
+        print(f"   Available providers: {available_providers}")
+    else:
+        print("⚠️  ONNX Runtime: GPU tidak tersedia, menggunakan CPU")
+        print(f"   Available providers: {available_providers}")
+    
+    print(f"   Using providers: {providers}")
 
     # ArcFace
     if os.path.isfile(arcface_path) and _arcface_sess is None:
         try:
             _arcface_sess = ort.InferenceSession(arcface_path, providers=providers)
-        except Exception:
+            actual_providers = _arcface_sess.get_providers()
+            print(f"✅ ArcFace model loaded successfully")
+            print(f"   Model: {os.path.basename(arcface_path)}")
+            print(f"   Active providers: {actual_providers}")
+        except Exception as e:
+            print(f"❌ Failed to load ArcFace model: {e}")
             _arcface_sess = None
 
     # Emotion
     if os.path.isfile(emotion_path) and _emotion_sess is None:
         try:
             _emotion_sess = ort.InferenceSession(emotion_path, providers=providers)
-        except Exception:
+            actual_providers = _emotion_sess.get_providers()
+            print(f"✅ Emotion model loaded successfully")
+            print(f"   Model: {os.path.basename(emotion_path)}")
+            print(f"   Active providers: {actual_providers}")
+        except Exception as e:
+            print(f"❌ Failed to load Emotion model: {e}")
             _emotion_sess = None
 
 
