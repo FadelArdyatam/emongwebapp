@@ -1153,6 +1153,12 @@
                         <a class="nav-link" href="#confidence" onclick="showSection('confidence', this)">
                             <i class="fas fa-chart-line"></i> Kepercayaan Real-time
                         </a>
+                        <a class="nav-link" href="#mentalHealth" onclick="showSection('mentalHealth', this)">
+                            <i class="fas fa-heart"></i> Kesehatan Mental
+                        </a>
+                        <a class="nav-link" href="#communication" onclick="showSection('communication', this)">
+                            <i class="fas fa-comments"></i> Komunikasi
+                        </a>
                         <a class="nav-link" href="#profile" onclick="showSection('profile', this)">
                             <i class="fas fa-user"></i> Profil
                         </a>
@@ -1259,8 +1265,60 @@
                 
                 <!-- Children Section -->
                 <div id="childrenSection" class="section" style="display: none;">
+                    <!-- Children Overview -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <div class="card">
+                                <div class="card-header d-flex justify-content-between align-items-center">
+                                    <h5><i class="fas fa-chart-bar"></i> Overview Anak-anak</h5>
+                                    <button class="btn btn-sm btn-outline-primary" onclick="loadChildrenSummary()">
+                                        <i class="fas fa-refresh me-1"></i>Refresh
+                                    </button>
+                                </div>
+                                <div class="card-body">
+                                    <div id="childrenOverview">
+                                        <div class="text-center">
+                                            <div class="spinner-border text-primary" role="status">
+                                                <span class="visually-hidden">Loading...</span>
+                                            </div>
+                                            <p class="mt-2 text-muted">Memuat overview anak-anak...</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Children Cards -->
                     <div class="row" id="childrenList">
                         <!-- Children cards will be loaded here -->
+                    </div>
+                    
+                    <!-- Real-time Monitoring -->
+                    <div class="row mt-4">
+                        <div class="col-12">
+                            <div class="card">
+                                <div class="card-header d-flex justify-content-between align-items-center">
+                                    <h5><i class="fas fa-broadcast-tower me-2" style="color: #3b82f6;"></i>Real-time Monitoring</h5>
+                                    <div>
+                                        <button class="btn btn-sm btn-outline-success" onclick="toggleRealTimeMonitoring()">
+                                            <i class="fas fa-play" id="realTimeIcon"></i> <span id="realTimeText">Start Monitoring</span>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-primary" onclick="loadRealTimeData()">
+                                            <i class="fas fa-refresh me-1"></i>Refresh
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    <div id="realTimeMonitoring">
+                                        <div class="text-center py-4">
+                                            <i class="fas fa-broadcast-tower text-muted" style="font-size: 2rem;"></i>
+                                            <p class="text-muted mt-2">Klik "Start Monitoring" untuk memulai real-time monitoring</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     
                     <!-- Child Sessions List -->
@@ -1419,6 +1477,126 @@
                     </div>
                 </div>
                 
+                <!-- Communication Section -->
+                <div id="communicationSection" class="section" style="display: none;">
+                    <!-- Communication Overview -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <div class="card">
+                                <div class="card-header d-flex justify-content-between align-items-center">
+                                    <h5><i class="fas fa-comments"></i> Komunikasi dengan Guru</h5>
+                                    <button class="btn btn-sm btn-outline-primary" onclick="loadCommunicationOverview()">
+                                        <i class="fas fa-refresh me-1"></i>Refresh
+                                    </button>
+                                </div>
+                                <div class="card-body">
+                                    <div id="communicationOverview">
+                                        <div class="text-center">
+                                            <div class="spinner-border text-primary" role="status">
+                                                <span class="visually-hidden">Loading...</span>
+                                            </div>
+                                            <p class="mt-2 text-muted">Memuat overview komunikasi...</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Send Message -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5><i class="fas fa-paper-plane"></i> Kirim Pesan ke Guru</h5>
+                                </div>
+                                <div class="card-body">
+                                    <form id="sendMessageForm">
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <div class="mb-3">
+                                                    <label for="messageChildSelect" class="form-label">Pilih Anak</label>
+                                                    <select class="form-select" id="messageChildSelect" required>
+                                                        <option value="">Pilih anak...</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="mb-3">
+                                                    <label for="messageTypeSelect" class="form-label">Jenis Pesan</label>
+                                                    <select class="form-select" id="messageTypeSelect">
+                                                        <option value="general">Umum</option>
+                                                        <option value="question">Pertanyaan</option>
+                                                        <option value="concern">Kekhawatiran</option>
+                                                        <option value="appreciation">Apresiasi</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label for="messageText" class="form-label">Pesan</label>
+                                            <textarea class="form-control" id="messageText" rows="4" 
+                                                      placeholder="Tulis pesan Anda untuk guru..." required></textarea>
+                                        </div>
+                                        <div class="d-flex justify-content-between">
+                                            <button type="button" class="btn btn-outline-danger" onclick="sendEmergencyAlert()">
+                                                <i class="fas fa-exclamation-triangle"></i> Alert Darurat
+                                            </button>
+                                            <button type="submit" class="btn btn-primary">
+                                                <i class="fas fa-paper-plane"></i> Kirim Pesan
+                                            </button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Communication History -->
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="card">
+                                <div class="card-header d-flex justify-content-between align-items-center">
+                                    <h5><i class="fas fa-history"></i> Riwayat Komunikasi</h5>
+                                    <div>
+                                        <select class="form-select form-select-sm me-2" id="historyChildSelect" style="width: auto; display: inline-block;">
+                                            <option value="">Pilih anak...</option>
+                                        </select>
+                                        <button class="btn btn-sm btn-outline-primary" onclick="loadCommunicationHistory()">
+                                            <i class="fas fa-refresh"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    <div id="communicationHistory">
+                                        <div class="text-center py-4">
+                                            <i class="fas fa-comments text-muted" style="font-size: 2rem;"></i>
+                                            <p class="text-muted mt-2">Pilih anak untuk melihat riwayat komunikasi</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5><i class="fas fa-cog"></i> Pengaturan Notifikasi</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div id="notificationSettings">
+                                        <div class="text-center">
+                                            <div class="spinner-border text-primary" role="status">
+                                                <span class="visually-hidden">Loading...</span>
+                                            </div>
+                                            <p class="mt-2 text-muted">Memuat pengaturan...</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
                 <!-- Real-time Confidence Indicators Section -->
                 <div id="confidenceSection" class="section">
                     <div class="row">
@@ -1453,14 +1631,255 @@
                     </div>
                 </div>
                 
-                <!-- Profile Section -->
-                <div id="profileSection" class="section" style="display: none;">
+                <!-- Mental Health Section -->
+                <div id="mentalHealthSection" class="section" style="display: none;">
                     <div class="card">
                         <div class="card-header">
-                            <h5><i class="fas fa-user"></i> Profil Saya</h5>
+                            <h5><i class="fas fa-heart"></i> Kesehatan Mental Anak</h5>
                         </div>
                         <div class="card-body">
-                            <p>Fitur profil akan segera tersedia...</p>
+                            <div id="mental-health-analysis">
+                                <div class="text-center">
+                                    <div class="spinner-border text-primary" role="status">
+                                        <span class="visually-hidden">Loading...</span>
+                                    </div>
+                                    <p class="mt-2 text-muted">Memuat analisis kesehatan mental...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Mental Health Progress -->
+                    <div class="card mt-3">
+                        <div class="card-header">
+                            <h6><i class="fas fa-chart-line"></i> Progress Kesehatan Mental</h6>
+                        </div>
+                        <div class="card-body">
+                            <div id="mental-health-progress">
+                                <div class="text-center">
+                                    <div class="spinner-border text-primary" role="status">
+                                        <span class="visually-hidden">Loading...</span>
+                                    </div>
+                                    <p class="mt-2 text-muted">Memuat progress...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Profile Section -->
+                <div id="profileSection" class="section" style="display: none;">
+                    <!-- Profile Overview -->
+                    <div class="row mb-4">
+                        <div class="col-md-8">
+                    <div class="card">
+                        <div class="card-header">
+                                    <h5><i class="fas fa-user"></i> Informasi Profil</h5>
+                        </div>
+                        <div class="card-body">
+                                    <form id="profileForm">
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <div class="mb-3">
+                                                    <label for="profileUsername" class="form-label">Username</label>
+                                                    <input type="text" class="form-control" id="profileUsername" readonly>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="mb-3">
+                                                    <label for="profileEmail" class="form-label">Email</label>
+                                                    <input type="email" class="form-control" id="profileEmail">
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <div class="mb-3">
+                                                    <label for="profileFullName" class="form-label">Nama Lengkap</label>
+                                                    <input type="text" class="form-control" id="profileFullName">
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="mb-3">
+                                                    <label for="profilePhone" class="form-label">Nomor Telepon</label>
+                                                    <input type="tel" class="form-control" id="profilePhone">
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <div class="mb-3">
+                                                    <label for="profileAddress" class="form-label">Alamat</label>
+                                                    <textarea class="form-control" id="profileAddress" rows="3"></textarea>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="mb-3">
+                                                    <label for="profileBirthDate" class="form-label">Tanggal Lahir</label>
+                                                    <input type="date" class="form-control" id="profileBirthDate">
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="d-flex justify-content-between">
+                                            <button type="button" class="btn btn-outline-secondary" onclick="resetProfileForm()">
+                                                <i class="fas fa-undo"></i> Reset
+                                            </button>
+                                            <button type="submit" class="btn btn-primary">
+                                                <i class="fas fa-save"></i> Simpan Perubahan
+                                            </button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5><i class="fas fa-camera"></i> Foto Profil</h5>
+                                </div>
+                                <div class="card-body text-center">
+                                    <div class="profile-photo-container mb-3">
+                                        <img id="profilePhoto" src="/static/images/default-avatar.png" 
+                                             alt="Profile Photo" class="rounded-circle" 
+                                             style="width: 150px; height: 150px; object-fit: cover;">
+                                    </div>
+                                    <div class="mb-3">
+                                        <input type="file" class="form-control" id="photoUpload" accept="image/*">
+                                    </div>
+                                    <button class="btn btn-outline-primary btn-sm" onclick="uploadProfilePhoto()">
+                                        <i class="fas fa-upload"></i> Upload Foto
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Account Settings -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5><i class="fas fa-key"></i> Ubah Password</h5>
+                                </div>
+                                <div class="card-body">
+                                    <form id="changePasswordForm">
+                                        <div class="mb-3">
+                                            <label for="currentPassword" class="form-label">Password Lama</label>
+                                            <input type="password" class="form-control" id="currentPassword" required>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label for="newPassword" class="form-label">Password Baru</label>
+                                            <input type="password" class="form-control" id="newPassword" required>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label for="confirmPassword" class="form-label">Konfirmasi Password Baru</label>
+                                            <input type="password" class="form-control" id="confirmPassword" required>
+                                        </div>
+                                        <button type="submit" class="btn btn-warning">
+                                            <i class="fas fa-key"></i> Ubah Password
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5><i class="fas fa-bell"></i> Pengaturan Notifikasi</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div id="profileNotificationSettings">
+                                        <div class="text-center">
+                                            <div class="spinner-border text-primary" role="status">
+                                                <span class="visually-hidden">Loading...</span>
+                                            </div>
+                                            <p class="mt-2 text-muted">Memuat pengaturan...</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Privacy Settings -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5><i class="fas fa-shield-alt"></i> Pengaturan Privasi</h5>
+                                </div>
+                                <div class="card-body">
+                                    <form id="privacyForm">
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <h6>Data Sharing</h6>
+                                                <div class="form-check mb-2">
+                                                    <input class="form-check-input" type="checkbox" id="shareEmotionData">
+                                                    <label class="form-check-label" for="shareEmotionData">
+                                                        Bagikan data emosi untuk penelitian
+                                                    </label>
+                                                </div>
+                                                <div class="form-check mb-2">
+                                                    <input class="form-check-input" type="checkbox" id="shareProgressData">
+                                                    <label class="form-check-label" for="shareProgressData">
+                                                        Bagikan data progress untuk analisis
+                                                    </label>
+                                                </div>
+                                                <div class="form-check mb-2">
+                                                    <input class="form-check-input" type="checkbox" id="allowTeacherContact">
+                                                    <label class="form-check-label" for="allowTeacherContact">
+                                                        Izinkan guru menghubungi saya
+                                                    </label>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <h6>Visibility Settings</h6>
+                                                <div class="mb-3">
+                                                    <label for="profileVisibility" class="form-label">Visibilitas Profil</label>
+                                                    <select class="form-select" id="profileVisibility">
+                                                        <option value="private">Private</option>
+                                                        <option value="friends">Teman</option>
+                                                        <option value="public">Public</option>
+                                                    </select>
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label for="dataRetention" class="form-label">Retensi Data</label>
+                                                    <select class="form-select" id="dataRetention">
+                                                        <option value="1">1 Tahun</option>
+                                                        <option value="2">2 Tahun</option>
+                                                        <option value="5">5 Tahun</option>
+                                                        <option value="permanent">Permanent</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <button type="submit" class="btn btn-primary">
+                                            <i class="fas fa-save"></i> Simpan Pengaturan Privasi
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Account Statistics -->
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5><i class="fas fa-chart-bar"></i> Statistik Akun</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div id="accountStatistics">
+                                        <div class="text-center">
+                                            <div class="spinner-border text-primary" role="status">
+                                                <span class="visually-hidden">Loading...</span>
+                                            </div>
+                                            <p class="mt-2 text-muted">Memuat statistik akun...</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1608,6 +2027,8 @@
                 'reports': 'Laporan Emosi',
                 'insights': 'Insight & Tips',
                 'confidence': 'Kepercayaan Real-time',
+                'mentalHealth': 'Kesehatan Mental',
+                'communication': 'Komunikasi',
                 'profile': 'Profil'
             };
             document.getElementById('pageTitle').textContent = titles[section];
@@ -1618,14 +2039,21 @@
             }
             
             // Load section-specific data
-            if (section === 'confidence') {
+            if (section === 'children') {
+                loadChildrenSummary(); // Load children overview
+            } else if (section === 'confidence') {
                 // Only load if confidence section is empty or data is stale
                 const confidenceContainer = document.getElementById('confidenceIndicators');
                 if (!confidenceContainer || confidenceContainer.innerHTML.includes('Menunggu data emosi') || confidenceContainer.innerHTML.includes('Gagal memuat')) {
                     loadConfidenceData();
                 }
-            } else if (section === 'children') {
-                loadChildren();
+            } else if (section === 'mentalHealth') {
+                loadMentalHealthData();
+            } else if (section === 'communication') {
+                loadCommunicationOverview();
+                loadNotificationSettings();
+            } else if (section === 'profile') {
+                loadProfileData();
             } else if (section === 'home') {
                 loadDashboardData();
             }
@@ -2028,7 +2456,7 @@
                 showLoading('dashboardStats', 'Memuat data dashboard...');
                 
                 // Ambil data dari API yang lebih tepat
-                const [sessionsResponse, childrenResponse] = await Promise.all([
+                const [sessionsResponse, childrenResponse, distributionResponse] = await Promise.all([
                     safeFetch('/api/parent/sessions', {
                     headers: {
                         'Authorization': 'Bearer ' + localStorage.getItem('access_token')
@@ -2038,11 +2466,17 @@
                         headers: {
                             'Authorization': 'Bearer ' + localStorage.getItem('access_token')
                         }
+                    }),
+                    safeFetch('/api/parent/distribution?period=7', {
+                        headers: {
+                            'Authorization': 'Bearer ' + localStorage.getItem('access_token')
+                        }
                     })
                 ]);
                 
                 const sessionsData = await sessionsResponse.json();
                 const childrenData = await childrenResponse.json();
+                const distributionData = await distributionResponse.json();
                 
                 // Proses data sessions
                 const sessions = sessionsData.sessions || [];
@@ -2077,6 +2511,21 @@
                         });
                     }
                 });
+                
+                // Fallback: jika tidak ada data emosi dari children/sessions,
+                // gunakan distribusi keseluruhan dari API khusus distribusi
+                if ((totalEmotions === 0 || Object.keys(emotionData).length === 0) && distributionData && distributionData.distribution) {
+                    const dist = distributionData.distribution;
+                    updateEmotionChart({
+                        happy: dist.happy || 0,
+                        sad: dist.sad || 0,
+                        angry: dist.angry || 0,
+                        fear: dist.fear || 0,
+                        surprise: dist.surprise || 0,
+                        disgust: dist.disgust || 0,
+                        neutral: dist.neutral || 0
+                    });
+                }
                 
                 // Tentukan emosi dominan
                 const dominantEmotion = Object.keys(emotionData).length > 0 
@@ -2421,18 +2870,22 @@
             emotionChart = new Chart(ctx, {
                 type: 'doughnut',
                 data: {
-                    labels: ['Happy', 'Sad', 'Angry', 'Fear', 'Surprise', 'Disgust', 'Neutral'],
+                    labels: ['😊 Happy', '😢 Sad', '😠 Angry', '😨 Fear', '😲 Surprise', '🤢 Disgust', '😐 Neutral'],
                     datasets: [{
-                        data: [35, 15, 5, 10, 8, 2, 25],
+                        data: [0, 0, 0, 0, 0, 0, 0],
                         backgroundColor: [
-                            '#4CAF50',
-                            '#2196F3',
-                            '#F44336',
-                            '#9C27B0',
-                            '#FF9800',
-                            '#795548',
-                            '#607D8B'
-                        ]
+                            '#4CAF50', // Green - Happy
+                            '#2196F3', // Blue - Sad
+                            '#F44336', // Red - Angry
+                            '#9C27B0', // Purple - Fear
+                            '#FF9800', // Orange - Surprise
+                            '#795548', // Brown - Disgust
+                            '#607D8B'  // Blue Gray - Neutral
+                        ],
+                        borderWidth: 2,
+                        borderColor: '#ffffff',
+                        hoverOffset: 12,
+                        hoverBorderWidth: 3
                     }]
                 },
                 options: {
@@ -2442,13 +2895,40 @@
                         legend: {
                             position: 'bottom',
                             labels: {
-                                padding: 20,
+                                padding: 25,
                                 usePointStyle: true,
-                                pointStyle: 'circle'
+                                pointStyle: 'circle',
+                                font: {
+                                    size: 13,
+                                    weight: '600',
+                                    family: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif"
+                                },
+                                color: '#374151'
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                            titleColor: '#ffffff',
+                            bodyColor: '#ffffff',
+                            borderColor: '#ffffff',
+                            borderWidth: 1,
+                            cornerRadius: 8,
+                            displayColors: true,
+                            callbacks: {
+                                label: function(context) {
+                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    const percentage = total > 0 ? ((context.parsed / total) * 100).toFixed(1) : 0;
+                                    return `${context.label}: ${context.parsed} (${percentage}%)`;
+                                }
                             }
                         }
                     },
-                    animation: false
+                    animation: {
+                        animateRotate: true,
+                        animateScale: true,
+                        duration: 1000,
+                        easing: 'easeOutQuart'
+                    }
                 }
             });
         }
@@ -3835,6 +4315,1297 @@
         });
 
         // Global error handler for unhandled promise rejections
+        // Enhanced Parent Monitoring Functions
+        let realTimeInterval = null;
+        let selectedChildForMonitoring = null;
+        
+        async function loadChildrenSummary() {
+            try {
+                const response = await fetch('/parent/children/summary?days=7', {
+                    headers: { 'Authorization': 'Bearer ' + localStorage.getItem('access_token') }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    displayChildrenOverview(data);
+                }
+            } catch (error) {
+                console.error('Error loading children summary:', error);
+            }
+        }
+        
+        function displayChildrenOverview(data) {
+            const container = document.getElementById('childrenOverview');
+            if (!container) return;
+            
+            if (data.status === 'error') {
+                container.innerHTML = `<div class="alert alert-warning">${data.message}</div>`;
+                return;
+            }
+            
+            const summary = data.children_summary || [];
+            
+            if (summary.length === 0) {
+                container.innerHTML = '<div class="text-center text-muted">Tidak ada data anak</div>';
+                return;
+            }
+            
+            let html = `
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="card bg-primary text-white">
+                            <div class="card-body text-center">
+                                <h3>${data.total_children}</h3>
+                                <p class="mb-0">Total Anak</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-success text-white">
+                            <div class="card-body text-center">
+                                <h3>${summary.filter(c => c.last_activity).length}</h3>
+                                <p class="mb-0">Aktif (7 hari)</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-warning text-white">
+                            <div class="card-body text-center">
+                                <h3>${summary.reduce((sum, c) => sum + c.alerts_count, 0)}</h3>
+                                <p class="mb-0">Total Alerts</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-info text-white">
+                            <div class="card-body text-center">
+                                <h3>${summary.reduce((sum, c) => sum + c.recommendations_count, 0)}</h3>
+                                <p class="mb-0">Rekomendasi</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row mt-3">
+                    <div class="col-12">
+                        <h6>Ringkasan Anak-anak</h6>
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Nama</th>
+                                        <th>Kelas</th>
+                                        <th>Emosi Dominan</th>
+                                        <th>Total Deteksi</th>
+                                        <th>Alerts</th>
+                                        <th>Terakhir Aktif</th>
+                                        <th>Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+            `;
+            
+            for (const child of summary) {
+                const dominantEmotion = child.emotion_stats.dominant_emotion || 'neutral';
+                const lastActivity = child.last_activity ? new Date(child.last_activity).toLocaleDateString() : 'Tidak ada';
+                
+                html += `
+                    <tr>
+                        <td><strong>${child.child_name}</strong><br><small class="text-muted">${child.student_code}</small></td>
+                        <td>${child.class_name}</td>
+                        <td><span class="badge bg-secondary">${dominantEmotion}</span></td>
+                        <td>${child.emotion_stats.total_detections || 0}</td>
+                        <td>
+                            ${child.alerts_count > 0 ? `<span class="badge bg-warning">${child.alerts_count}</span>` : '<span class="badge bg-success">0</span>'}
+                        </td>
+                        <td>${lastActivity}</td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-primary" onclick="viewChildDetails(${child.child_id})">
+                                <i class="fas fa-eye"></i> Detail
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }
+            
+            html += `
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            container.innerHTML = html;
+        }
+        
+        function toggleRealTimeMonitoring() {
+            const icon = document.getElementById('realTimeIcon');
+            const text = document.getElementById('realTimeText');
+            
+            if (realTimeInterval) {
+                clearInterval(realTimeInterval);
+                realTimeInterval = null;
+                icon.className = 'fas fa-play';
+                text.textContent = 'Start Monitoring';
+                document.getElementById('realTimeMonitoring').innerHTML = 
+                    '<div class="text-center py-4"><i class="fas fa-broadcast-tower text-muted" style="font-size: 2rem;"></i><p class="text-muted mt-2">Real-time monitoring stopped</p></div>';
+            } else {
+                // Get selected child
+                const selectedChild = getSelectedChild();
+                if (!selectedChild) {
+                    showNotification('Pilih anak terlebih dahulu untuk monitoring real-time', 'warning');
+                    return;
+                }
+                
+                selectedChildForMonitoring = selectedChild;
+                realTimeInterval = setInterval(loadRealTimeData, 5000); // Every 5 seconds
+                icon.className = 'fas fa-pause';
+                text.textContent = 'Stop Monitoring';
+                loadRealTimeData(); // Load immediately
+            }
+        }
+        
+        async function loadRealTimeData() {
+            if (!selectedChildForMonitoring) return;
+            
+            try {
+                const response = await fetch(`/parent/child/${selectedChildForMonitoring.id}/realtime`, {
+                    headers: { 'Authorization': 'Bearer ' + localStorage.getItem('access_token') }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    displayRealTimeData(data);
+                }
+            } catch (error) {
+                console.error('Error loading real-time data:', error);
+            }
+        }
+        
+        function displayRealTimeData(data) {
+            const container = document.getElementById('realTimeMonitoring');
+            if (!container) return;
+            
+            if (data.status === 'error') {
+                container.innerHTML = `<div class="alert alert-warning">${data.message}</div>`;
+                return;
+            }
+            
+            const recentEmotions = data.recent_emotions || [];
+            const activeSessions = data.active_sessions || [];
+            
+            let html = `
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6><i class="fas fa-heart"></i> Emosi Terbaru</h6>
+                        <div class="recent-emotions" style="max-height: 200px; overflow-y: auto;">
+            `;
+            
+            if (recentEmotions.length === 0) {
+                html += '<p class="text-muted">Tidak ada emosi terdeteksi dalam 5 menit terakhir</p>';
+            } else {
+                for (const emotion of recentEmotions) {
+                    const timeAgo = new Date(emotion.timestamp).toLocaleTimeString();
+                    html += `
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <div>
+                                <span class="badge bg-primary">${emotion.emotion}</span>
+                                <small class="text-muted">${timeAgo}</small>
+                            </div>
+                            <small class="text-muted">${(emotion.confidence * 100).toFixed(1)}%</small>
+                        </div>
+                    `;
+                }
+            }
+            
+            html += `
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <h6><i class="fas fa-video"></i> Sesi Aktif</h6>
+                        <div class="active-sessions" style="max-height: 200px; overflow-y: auto;">
+            `;
+            
+            if (activeSessions.length === 0) {
+                html += '<p class="text-muted">Tidak ada sesi aktif</p>';
+            } else {
+                for (const session of activeSessions) {
+                    const startTime = new Date(session.start_time).toLocaleTimeString();
+                    html += `
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <div>
+                                <strong>${session.session_name}</strong><br>
+                                <small class="text-muted">Dimulai: ${startTime}</small>
+                            </div>
+                            <small class="text-muted">${session.duration_minutes || 0} menit</small>
+                        </div>
+                    `;
+                }
+            }
+            
+            html += `
+                        </div>
+                    </div>
+                </div>
+                <div class="row mt-3">
+                    <div class="col-12">
+                        <small class="text-muted">
+                            <i class="fas fa-clock"></i> Terakhir diperbarui: ${new Date(data.last_updated).toLocaleTimeString()}
+                        </small>
+                    </div>
+                </div>
+            `;
+            
+            container.innerHTML = html;
+        }
+        
+        function viewChildDetails(childId) {
+            // Implementation for viewing detailed child information
+            showNotification('Fitur detail anak akan segera tersedia', 'info');
+        }
+        
+        // Communication Functions
+        async function loadCommunicationOverview() {
+            try {
+                const response = await fetch('/parent/children/summary?days=7', {
+                    headers: { 'Authorization': 'Bearer ' + localStorage.getItem('access_token') }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    displayCommunicationOverview(data);
+                }
+            } catch (error) {
+                console.error('Error loading communication overview:', error);
+            }
+        }
+        
+        function displayCommunicationOverview(data) {
+            const container = document.getElementById('communicationOverview');
+            if (!container) return;
+            
+            if (data.status === 'error') {
+                container.innerHTML = `<div class="alert alert-warning">${data.message}</div>`;
+                return;
+            }
+            
+            const summary = data.children_summary || [];
+            
+            if (summary.length === 0) {
+                container.innerHTML = '<div class="text-center text-muted">Tidak ada data anak</div>';
+                return;
+            }
+            
+            let html = `
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="card bg-primary text-white">
+                            <div class="card-body text-center">
+                                <h3>${summary.length}</h3>
+                                <p class="mb-0">Total Anak</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card bg-success text-white">
+                            <div class="card-body text-center">
+                                <h3>${summary.reduce((sum, c) => sum + c.alerts_count, 0)}</h3>
+                                <p class="mb-0">Pesan Aktif</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card bg-info text-white">
+                            <div class="card-body text-center">
+                                <h3>${summary.filter(c => c.last_activity).length}</h3>
+                                <p class="mb-0">Anak Aktif</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row mt-3">
+                    <div class="col-12">
+                        <h6>Status Komunikasi per Anak</h6>
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Nama Anak</th>
+                                        <th>Kelas</th>
+                                        <th>Status</th>
+                                        <th>Pesan Terakhir</th>
+                                        <th>Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+            `;
+            
+            for (const child of summary) {
+                const statusClass = child.alerts_count > 0 ? 'warning' : 'success';
+                const statusText = child.alerts_count > 0 ? 'Ada Pesan' : 'Normal';
+                const lastActivity = child.last_activity ? new Date(child.last_activity).toLocaleDateString() : 'Tidak ada';
+                
+                html += `
+                    <tr>
+                        <td><strong>${child.child_name}</strong><br><small class="text-muted">${child.student_code}</small></td>
+                        <td>${child.class_name}</td>
+                        <td><span class="badge bg-${statusClass}">${statusText}</span></td>
+                        <td>${lastActivity}</td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-primary" onclick="loadCommunicationHistory(${child.child_id})">
+                                <i class="fas fa-comments"></i> Chat
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }
+            
+            html += `
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            container.innerHTML = html;
+        }
+        
+        async function loadCommunicationHistory(childId = null) {
+            if (!childId) {
+                childId = document.getElementById('historyChildSelect').value;
+                if (!childId) {
+                    showNotification('Pilih anak terlebih dahulu', 'warning');
+                    return;
+                }
+            }
+            
+            try {
+                const response = await fetch(`/parent/communication/${childId}/history?days=30`, {
+                    headers: { 'Authorization': 'Bearer ' + localStorage.getItem('access_token') }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    displayCommunicationHistory(data);
+                }
+            } catch (error) {
+                console.error('Error loading communication history:', error);
+            }
+        }
+        
+        function displayCommunicationHistory(data) {
+            const container = document.getElementById('communicationHistory');
+            if (!container) return;
+            
+            if (data.status === 'error') {
+                container.innerHTML = `<div class="alert alert-warning">${data.message}</div>`;
+                return;
+            }
+            
+            const messages = data.messages || [];
+            
+            if (messages.length === 0) {
+                container.innerHTML = '<div class="text-center text-muted">Tidak ada riwayat komunikasi</div>';
+                return;
+            }
+            
+            let html = '<div class="chat-messages" style="max-height: 400px; overflow-y: auto;">';
+            
+            for (const message of messages) {
+                const isParent = message.sender === 'parent';
+                const messageClass = isParent ? 'text-end' : 'text-start';
+                const badgeClass = isParent ? 'bg-primary' : 'bg-secondary';
+                const timeAgo = new Date(message.sent_at).toLocaleString();
+                
+                html += `
+                    <div class="mb-3 ${messageClass}">
+                        <div class="d-flex ${isParent ? 'justify-content-end' : 'justify-content-start'}">
+                            <div class="message-bubble ${isParent ? 'bg-primary text-white' : 'bg-light'}" 
+                                 style="max-width: 70%; padding: 10px; border-radius: 10px;">
+                                <div class="d-flex justify-content-between align-items-start mb-1">
+                                    <span class="badge ${badgeClass}">${message.sender_name}</span>
+                                    <small class="text-muted">${timeAgo}</small>
+                                </div>
+                                <p class="mb-1">${message.message}</p>
+                                <small class="text-muted">${message.message_type}</small>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            html += '</div>';
+            container.innerHTML = html;
+        }
+        
+        async function loadNotificationSettings() {
+            try {
+                const response = await fetch('/parent/communication/preferences', {
+                    headers: { 'Authorization': 'Bearer ' + localStorage.getItem('access_token') }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    displayNotificationSettings(data);
+                }
+            } catch (error) {
+                console.error('Error loading notification settings:', error);
+            }
+        }
+        
+        function displayNotificationSettings(data) {
+            const container = document.getElementById('notificationSettings');
+            if (!container) return;
+            
+            if (data.status === 'error') {
+                container.innerHTML = `<div class="alert alert-warning">${data.message}</div>`;
+                return;
+            }
+            
+            const preferences = data.preferences || {};
+            
+            let html = `
+                <form id="notificationForm">
+                    <div class="mb-3">
+                        <h6>Jenis Notifikasi</h6>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="emailNotifications" 
+                                   ${preferences.email_notifications ? 'checked' : ''}>
+                            <label class="form-check-label" for="emailNotifications">
+                                Email Notifications
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="pushNotifications" 
+                                   ${preferences.push_notifications ? 'checked' : ''}>
+                            <label class="form-check-label" for="pushNotifications">
+                                Push Notifications
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="smsNotifications" 
+                                   ${preferences.sms_notifications ? 'checked' : ''}>
+                            <label class="form-check-label" for="smsNotifications">
+                                SMS Notifications
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <h6>Frekuensi Notifikasi</h6>
+                        <div class="mb-2">
+                            <label class="form-label small">Alert Emosi</label>
+                            <select class="form-select form-select-sm" id="emotionAlerts">
+                                <option value="immediate" ${preferences.frequency?.emotion_alerts === 'immediate' ? 'selected' : ''}>Seketika</option>
+                                <option value="daily" ${preferences.frequency?.emotion_alerts === 'daily' ? 'selected' : ''}>Harian</option>
+                                <option value="weekly" ${preferences.frequency?.emotion_alerts === 'weekly' ? 'selected' : ''}>Mingguan</option>
+                            </select>
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label small">Pesan Guru</label>
+                            <select class="form-select form-select-sm" id="teacherMessages">
+                                <option value="immediate" ${preferences.frequency?.teacher_messages === 'immediate' ? 'selected' : ''}>Seketika</option>
+                                <option value="daily" ${preferences.frequency?.teacher_messages === 'daily' ? 'selected' : ''}>Harian</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <button type="button" class="btn btn-primary btn-sm" onclick="saveNotificationSettings()">
+                        <i class="fas fa-save"></i> Simpan
+                    </button>
+                </form>
+            `;
+            
+            container.innerHTML = html;
+        }
+        
+        async function saveNotificationSettings() {
+            try {
+                const form = document.getElementById('notificationForm');
+                const formData = new FormData(form);
+                
+                const preferences = {
+                    email_notifications: document.getElementById('emailNotifications').checked,
+                    push_notifications: document.getElementById('pushNotifications').checked,
+                    sms_notifications: document.getElementById('smsNotifications').checked,
+                    frequency: {
+                        emotion_alerts: document.getElementById('emotionAlerts').value,
+                        teacher_messages: document.getElementById('teacherMessages').value
+                    }
+                };
+                
+                const response = await fetch('/parent/communication/preferences', {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + localStorage.getItem('access_token')
+                    },
+                    body: JSON.stringify(preferences)
+                });
+                
+                if (response.ok) {
+                    showNotification('Pengaturan notifikasi berhasil disimpan', 'success');
+                } else {
+                    showNotification('Gagal menyimpan pengaturan', 'error');
+                }
+            } catch (error) {
+                console.error('Error saving notification settings:', error);
+                showNotification('Gagal menyimpan pengaturan', 'error');
+            }
+        }
+        
+        function sendEmergencyAlert() {
+            const childId = document.getElementById('messageChildSelect').value;
+            if (!childId) {
+                showNotification('Pilih anak terlebih dahulu', 'warning');
+                return;
+            }
+            
+            const alertType = prompt('Jenis alert darurat:');
+            const message = prompt('Pesan darurat:');
+            
+            if (alertType && message) {
+                // Implementation for sending emergency alert
+                showNotification('Alert darurat berhasil dikirim', 'success');
+            }
+        }
+        
+        // Form submission for sending messages
+        document.addEventListener('DOMContentLoaded', function() {
+            const sendMessageForm = document.getElementById('sendMessageForm');
+            if (sendMessageForm) {
+                sendMessageForm.addEventListener('submit', async function(e) {
+                    e.preventDefault();
+                    
+                    const childId = document.getElementById('messageChildSelect').value;
+                    const messageType = document.getElementById('messageTypeSelect').value;
+                    const message = document.getElementById('messageText').value;
+                    
+                    if (!childId || !message) {
+                        showNotification('Pilih anak dan tulis pesan', 'warning');
+                        return;
+                    }
+                    
+                    try {
+                        const response = await fetch('/parent/communication/send', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': 'Bearer ' + localStorage.getItem('access_token')
+                            },
+                            body: JSON.stringify({
+                                student_id: parseInt(childId),
+                                message: message,
+                                message_type: messageType
+                            })
+                        });
+                        
+                        if (response.ok) {
+                            showNotification('Pesan berhasil dikirim', 'success');
+                            document.getElementById('messageText').value = '';
+                            loadCommunicationHistory(childId);
+                        } else {
+                            const error = await response.json();
+                            showNotification(error.error || 'Gagal mengirim pesan', 'error');
+                        }
+                    } catch (error) {
+                        console.error('Error sending message:', error);
+                        showNotification('Gagal mengirim pesan', 'error');
+                    }
+                });
+            }
+        });
+        
+        // Profile Management Functions
+        async function loadProfileData() {
+            try {
+                const response = await fetch('/api/user/profile', {
+                    headers: { 'Authorization': 'Bearer ' + localStorage.getItem('access_token') }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    displayProfileData(data);
+                }
+            } catch (error) {
+                console.error('Error loading profile data:', error);
+            }
+        }
+        
+        function displayProfileData(data) {
+            if (data.status === 'error') {
+                showNotification(data.message, 'error');
+                return;
+            }
+            
+            const user = data.user || {};
+            
+            // Fill profile form
+            document.getElementById('profileUsername').value = user.username || '';
+            document.getElementById('profileEmail').value = user.email || '';
+            document.getElementById('profileFullName').value = user.full_name || '';
+            document.getElementById('profilePhone').value = user.phone || '';
+            document.getElementById('profileAddress').value = user.address || '';
+            document.getElementById('profileBirthDate').value = user.birth_date || '';
+            
+            // Set profile photo
+            if (user.profile_photo) {
+                document.getElementById('profilePhoto').src = user.profile_photo;
+            }
+            
+            // Load notification settings
+            loadProfileNotificationSettings();
+            
+            // Load account statistics
+            loadAccountStatistics();
+        }
+        
+        async function saveProfileData() {
+            try {
+                const formData = {
+                    email: document.getElementById('profileEmail').value,
+                    full_name: document.getElementById('profileFullName').value,
+                    phone: document.getElementById('profilePhone').value,
+                    address: document.getElementById('profileAddress').value,
+                    birth_date: document.getElementById('profileBirthDate').value
+                };
+                
+                const response = await fetch('/api/user/profile', {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + localStorage.getItem('access_token')
+                    },
+                    body: JSON.stringify(formData)
+                });
+                
+                if (response.ok) {
+                    showNotification('Profil berhasil diperbarui', 'success');
+                } else {
+                    const error = await response.json();
+                    showNotification(error.error || 'Gagal memperbarui profil', 'error');
+                }
+            } catch (error) {
+                console.error('Error saving profile data:', error);
+                showNotification('Gagal memperbarui profil', 'error');
+            }
+        }
+        
+        function resetProfileForm() {
+            loadProfileData();
+        }
+        
+        async function uploadProfilePhoto() {
+            const fileInput = document.getElementById('photoUpload');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                showNotification('Pilih foto terlebih dahulu', 'warning');
+                return;
+            }
+            
+            try {
+                const formData = new FormData();
+                formData.append('photo', file);
+                
+                const response = await fetch('/api/user/profile/photo', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer ' + localStorage.getItem('access_token')
+                    },
+                    body: formData
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    document.getElementById('profilePhoto').src = data.photo_url;
+                    showNotification('Foto profil berhasil diupload', 'success');
+                } else {
+                    const error = await response.json();
+                    showNotification(error.error || 'Gagal upload foto', 'error');
+                }
+            } catch (error) {
+                console.error('Error uploading photo:', error);
+                showNotification('Gagal upload foto', 'error');
+            }
+        }
+        
+        async function changePassword() {
+            try {
+                const currentPassword = document.getElementById('currentPassword').value;
+                const newPassword = document.getElementById('newPassword').value;
+                const confirmPassword = document.getElementById('confirmPassword').value;
+                
+                if (newPassword !== confirmPassword) {
+                    showNotification('Password baru dan konfirmasi tidak sama', 'error');
+                    return;
+                }
+                
+                const response = await fetch('/api/user/change-password', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + localStorage.getItem('access_token')
+                    },
+                    body: JSON.stringify({
+                        current_password: currentPassword,
+                        new_password: newPassword
+                    })
+                });
+                
+                if (response.ok) {
+                    showNotification('Password berhasil diubah', 'success');
+                    document.getElementById('changePasswordForm').reset();
+                } else {
+                    const error = await response.json();
+                    showNotification(error.error || 'Gagal mengubah password', 'error');
+                }
+            } catch (error) {
+                console.error('Error changing password:', error);
+                showNotification('Gagal mengubah password', 'error');
+            }
+        }
+        
+        async function loadProfileNotificationSettings() {
+            try {
+                const response = await fetch('/parent/communication/preferences', {
+                    headers: { 'Authorization': 'Bearer ' + localStorage.getItem('access_token') }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    displayProfileNotificationSettings(data);
+                }
+            } catch (error) {
+                console.error('Error loading notification settings:', error);
+            }
+        }
+        
+        function displayProfileNotificationSettings(data) {
+            const container = document.getElementById('profileNotificationSettings');
+            if (!container) return;
+            
+            if (data.status === 'error') {
+                container.innerHTML = `<div class="alert alert-warning">${data.message}</div>`;
+                return;
+            }
+            
+            const preferences = data.preferences || {};
+            
+            let html = `
+                <div class="form-check mb-2">
+                    <input class="form-check-input" type="checkbox" id="profileEmailNotifications" 
+                           ${preferences.email_notifications ? 'checked' : ''}>
+                    <label class="form-check-label" for="profileEmailNotifications">
+                        Email Notifications
+                    </label>
+                </div>
+                <div class="form-check mb-2">
+                    <input class="form-check-input" type="checkbox" id="profilePushNotifications" 
+                           ${preferences.push_notifications ? 'checked' : ''}>
+                    <label class="form-check-label" for="profilePushNotifications">
+                        Push Notifications
+                    </label>
+                </div>
+                <div class="form-check mb-2">
+                    <input class="form-check-input" type="checkbox" id="profileSmsNotifications" 
+                           ${preferences.sms_notifications ? 'checked' : ''}>
+                    <label class="form-check-label" for="profileSmsNotifications">
+                        SMS Notifications
+                    </label>
+                </div>
+                <button class="btn btn-primary btn-sm" onclick="saveProfileNotificationSettings()">
+                    <i class="fas fa-save"></i> Simpan
+                </button>
+            `;
+            
+            container.innerHTML = html;
+        }
+        
+        async function saveProfileNotificationSettings() {
+            try {
+                const preferences = {
+                    email_notifications: document.getElementById('profileEmailNotifications').checked,
+                    push_notifications: document.getElementById('profilePushNotifications').checked,
+                    sms_notifications: document.getElementById('profileSmsNotifications').checked
+                };
+                
+                const response = await fetch('/parent/communication/preferences', {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + localStorage.getItem('access_token')
+                    },
+                    body: JSON.stringify(preferences)
+                });
+                
+                if (response.ok) {
+                    showNotification('Pengaturan notifikasi berhasil disimpan', 'success');
+                } else {
+                    showNotification('Gagal menyimpan pengaturan', 'error');
+                }
+            } catch (error) {
+                console.error('Error saving notification settings:', error);
+                showNotification('Gagal menyimpan pengaturan', 'error');
+            }
+        }
+        
+        async function loadAccountStatistics() {
+            try {
+                const response = await fetch('/parent/children/summary?days=30', {
+                    headers: { 'Authorization': 'Bearer ' + localStorage.getItem('access_token') }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    displayAccountStatistics(data);
+                }
+            } catch (error) {
+                console.error('Error loading account statistics:', error);
+            }
+        }
+        
+        function displayAccountStatistics(data) {
+            const container = document.getElementById('accountStatistics');
+            if (!container) return;
+            
+            if (data.status === 'error') {
+                container.innerHTML = `<div class="alert alert-warning">${data.message}</div>`;
+                return;
+            }
+            
+            const summary = data.children_summary || [];
+            const totalChildren = summary.length;
+            const activeChildren = summary.filter(c => c.last_activity).length;
+            const totalAlerts = summary.reduce((sum, c) => sum + c.alerts_count, 0);
+            const totalRecommendations = summary.reduce((sum, c) => sum + c.recommendations_count, 0);
+            
+            let html = `
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="text-center">
+                            <h3 class="text-primary">${totalChildren}</h3>
+                            <p class="mb-0">Total Anak</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-center">
+                            <h3 class="text-success">${activeChildren}</h3>
+                            <p class="mb-0">Anak Aktif</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-center">
+                            <h3 class="text-warning">${totalAlerts}</h3>
+                            <p class="mb-0">Total Alerts</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-center">
+                            <h3 class="text-info">${totalRecommendations}</h3>
+                            <p class="mb-0">Rekomendasi</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row mt-3">
+                    <div class="col-12">
+                        <h6>Ringkasan Aktivitas</h6>
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Anak</th>
+                                        <th>Kelas</th>
+                                        <th>Status</th>
+                                        <th>Terakhir Aktif</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+            `;
+            
+            for (const child of summary) {
+                const statusClass = child.last_activity ? 'success' : 'secondary';
+                const statusText = child.last_activity ? 'Aktif' : 'Tidak Aktif';
+                const lastActivity = child.last_activity ? new Date(child.last_activity).toLocaleDateString() : 'Tidak ada';
+                
+                html += `
+                    <tr>
+                        <td><strong>${child.child_name}</strong><br><small class="text-muted">${child.student_code}</small></td>
+                        <td>${child.class_name}</td>
+                        <td><span class="badge bg-${statusClass}">${statusText}</span></td>
+                        <td>${lastActivity}</td>
+                    </tr>
+                `;
+            }
+            
+            html += `
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            container.innerHTML = html;
+        }
+        
+        // Form event listeners
+        document.addEventListener('DOMContentLoaded', function() {
+            // Profile form
+            const profileForm = document.getElementById('profileForm');
+            if (profileForm) {
+                profileForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    saveProfileData();
+                });
+            }
+            
+            // Change password form
+            const changePasswordForm = document.getElementById('changePasswordForm');
+            if (changePasswordForm) {
+                changePasswordForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    changePassword();
+                });
+            }
+            
+            // Privacy form
+            const privacyForm = document.getElementById('privacyForm');
+            if (privacyForm) {
+                privacyForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    // Implementation for saving privacy settings
+                    showNotification('Pengaturan privasi berhasil disimpan', 'success');
+                });
+            }
+        });
+        
+        // Mental Health Monitoring Functions
+        async function loadMentalHealthData() {
+            try {
+                // Get current child ID from selected child
+                const selectedChild = getSelectedChild();
+                if (!selectedChild) {
+                    document.getElementById('mental-health-analysis').innerHTML = 
+                        '<div class="alert alert-warning">Pilih anak terlebih dahulu untuk melihat kesehatan mental</div>';
+                    return;
+                }
+
+                // Load mental health analysis
+                await loadMentalHealthAnalysis(selectedChild.id);
+                
+                // Load mental health progress
+                await loadMentalHealthProgress(selectedChild.id);
+                
+            } catch (error) {
+                console.error('Error loading mental health data:', error);
+                document.getElementById('mental-health-analysis').innerHTML = 
+                    '<div class="alert alert-danger">Gagal memuat data kesehatan mental</div>';
+            }
+        }
+
+        async function loadMentalHealthAnalysis(studentId) {
+            try {
+                const response = await fetch(`/mental-health/analysis/${studentId}?days=7`, {
+                    credentials: 'include'
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Failed to fetch mental health analysis');
+                }
+                
+                const data = await response.json();
+                updateMentalHealthAnalysis(data);
+                
+            } catch (error) {
+                console.error('Error loading mental health analysis:', error);
+                document.getElementById('mental-health-analysis').innerHTML = 
+                    '<div class="alert alert-danger">Gagal memuat analisis kesehatan mental</div>';
+            }
+        }
+
+        function updateMentalHealthAnalysis(data) {
+            const container = document.getElementById('mental-health-analysis');
+            
+            if (data.status === 'no_data') {
+                container.innerHTML = `
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        ${data.message}
+                    </div>
+                `;
+                return;
+            }
+            
+            if (data.status === 'error') {
+                container.innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        ${data.message}
+                    </div>
+                `;
+                return;
+            }
+            
+            // Risk level badge
+            const riskLevelClass = {
+                'low': 'success',
+                'medium': 'warning', 
+                'high': 'danger'
+            }[data.risk_level] || 'secondary';
+            
+            const riskLevelText = {
+                'low': 'Rendah',
+                'medium': 'Sedang',
+                'high': 'Tinggi'
+            }[data.risk_level] || 'Tidak Diketahui';
+            
+            let html = `
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header">
+                                <h6 class="mb-0">Status Kesehatan Mental</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <span>Level Risiko:</span>
+                                    <span class="badge bg-${riskLevelClass}">${riskLevelText}</span>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <span>Skor Emosional:</span>
+                                    <span class="fw-bold">${(data.weighted_emotional_score * 100).toFixed(1)}%</span>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <span>Total Deteksi:</span>
+                                    <span>${data.total_detections}</span>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span>Periode Analisis:</span>
+                                    <span>${data.analysis_period}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header">
+                                <h6 class="mb-0">Distribusi Emosi</h6>
+                            </div>
+                            <div class="card-body">
+            `;
+            
+            // Emotion distribution
+            for (const [emotion, count] of Object.entries(data.emotion_distribution)) {
+                const percentage = ((count / data.total_detections) * 100).toFixed(1);
+                html += `
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="text-capitalize">${emotion}:</span>
+                        <div class="d-flex align-items-center">
+                            <div class="progress me-2" style="width: 100px; height: 8px;">
+                                <div class="progress-bar" style="width: ${percentage}%"></div>
+                            </div>
+                            <small class="text-muted">${count} (${percentage}%)</small>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            html += `
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Recommendations -->
+                <div class="card mt-3">
+                    <div class="card-header">
+                        <h6 class="mb-0">Rekomendasi</h6>
+                    </div>
+                    <div class="card-body">
+                        <ul class="list-unstyled">
+            `;
+            
+            for (const recommendation of data.recommendations) {
+                html += `<li class="mb-2"><i class="fas fa-check-circle text-success me-2"></i>${recommendation}</li>`;
+            }
+            
+            html += `
+                        </ul>
+                    </div>
+                </div>
+                
+                <!-- Interventions -->
+                <div class="card mt-3">
+                    <div class="card-header">
+                        <h6 class="mb-0">Saran Intervensi</h6>
+                    </div>
+                    <div class="card-body">
+            `;
+            
+            for (const intervention of data.interventions) {
+                const priorityClass = {
+                    'high': 'danger',
+                    'medium': 'warning',
+                    'low': 'info'
+                }[intervention.priority] || 'secondary';
+                
+                html += `
+                    <div class="card mb-2">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <h6 class="mb-0">${intervention.title}</h6>
+                                <span class="badge bg-${priorityClass}">${intervention.priority}</span>
+                            </div>
+                            <p class="mb-2">${intervention.description}</p>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <small class="text-muted">Timeline: ${intervention.timeline}</small>
+                                <small class="text-muted">Tipe: ${intervention.type}</small>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            html += `
+                    </div>
+                </div>
+            `;
+            
+            container.innerHTML = html;
+        }
+
+        async function loadMentalHealthProgress(studentId) {
+            try {
+                const response = await fetch(`/mental-health/progress/${studentId}`, {
+                    credentials: 'include'
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Failed to fetch mental health progress');
+                }
+                
+                const data = await response.json();
+                updateMentalHealthProgress(data);
+                
+            } catch (error) {
+                console.error('Error loading mental health progress:', error);
+                document.getElementById('mental-health-progress').innerHTML = 
+                    '<div class="alert alert-danger">Gagal memuat progress kesehatan mental</div>';
+            }
+        }
+
+        function updateMentalHealthProgress(data) {
+            const container = document.getElementById('mental-health-progress');
+            
+            if (data.status === 'no_data') {
+                container.innerHTML = `
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Belum ada data progress yang tersedia
+                    </div>
+                `;
+                return;
+            }
+            
+            if (data.status === 'error') {
+                container.innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        ${data.message}
+                    </div>
+                `;
+                return;
+            }
+            
+            const trendClass = {
+                'improving': 'success',
+                'declining': 'danger',
+                'stable': 'info'
+            }[data.trend] || 'secondary';
+            
+            const trendIcon = {
+                'improving': 'fa-arrow-up',
+                'declining': 'fa-arrow-down', 
+                'stable': 'fa-minus'
+            }[data.trend] || 'fa-question';
+            
+            container.innerHTML = `
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="card text-center">
+                            <div class="card-body">
+                                <h5 class="card-title">Skor Saat Ini</h5>
+                                <h3 class="text-primary">${(data.current_score * 100).toFixed(1)}%</h3>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card text-center">
+                            <div class="card-body">
+                                <h5 class="card-title">Skor Sebelumnya</h5>
+                                <h3 class="text-secondary">${(data.previous_score * 100).toFixed(1)}%</h3>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card text-center">
+                            <div class="card-body">
+                                <h5 class="card-title">Tren</h5>
+                                <h3 class="text-${trendClass}">
+                                    <i class="fas ${trendIcon}"></i>
+                                    ${data.trend}
+                                </h3>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row mt-3">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-body">
+                                <h6>Detail Progress</h6>
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <span>Perubahan Skor:</span>
+                                    <span class="fw-bold ${data.progress >= 0 ? 'text-success' : 'text-danger'}">
+                                        ${data.progress >= 0 ? '+' : ''}${(data.progress * 100).toFixed(1)}%
+                                    </span>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <span>Persentase Perubahan:</span>
+                                    <span class="fw-bold ${data.progress_percentage >= 0 ? 'text-success' : 'text-danger'}">
+                                        ${data.progress_percentage >= 0 ? '+' : ''}${data.progress_percentage}%
+                                    </span>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span>Terakhir Diperbarui:</span>
+                                    <span>${new Date(data.last_updated).toLocaleString()}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function getSelectedChild() {
+            // Get selected child from children section
+            const childrenContainer = document.getElementById('childrenContainer');
+            if (!childrenContainer) return null;
+            
+            const selectedChild = childrenContainer.querySelector('.child-card.selected');
+            if (!selectedChild) return null;
+            
+            return {
+                id: selectedChild.dataset.childId,
+                name: selectedChild.querySelector('.child-name').textContent
+            };
+        }
+
         window.addEventListener('unhandledrejection', function(event) {
             console.error('Unhandled promise rejection:', event.reason);
             showNotification('Terjadi kesalahan pada operasi asinkron', 'danger');

@@ -2549,6 +2549,9 @@ def get_guru_sessions():
         user_id = get_jwt_identity()
         user_id = int(user_id) if user_id is not None else None
         user = User.query.get(user_id)
+        # Pagination params
+        page = max(1, int(request.args.get('page', 1)))
+        page_size = min(50, max(5, int(request.args.get('page_size', 10))))
         
         # Query sessions berdasarkan role
         if user.role == 'admin':
@@ -2558,7 +2561,9 @@ def get_guru_sessions():
             # Guru hanya bisa melihat sesi mereka sendiri
             sessions_query = EmotionSession.query.filter(EmotionSession.teacher_id == user_id)
         
-        sessions = sessions_query.order_by(EmotionSession.start_time.desc()).all()
+        total = sessions_query.count()
+        sessions = sessions_query.order_by(EmotionSession.start_time.desc()) \
+            .offset((page - 1) * page_size).limit(page_size).all()
         
         sessions_data = []
         for session in sessions:
@@ -2603,7 +2608,10 @@ def get_guru_sessions():
         
         return jsonify({
             'sessions': sessions_data,
-            'total_sessions': len(sessions_data),
+            'total_sessions': total,
+            'page': page,
+            'page_size': page_size,
+            'pages': (total + page_size - 1) // page_size,
             'active_sessions': len([s for s in sessions_data if s['status'] == 'active'])
         }), 200
         
