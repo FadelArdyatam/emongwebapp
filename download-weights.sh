@@ -1,4 +1,4 @@
-pip3 install gdown
+pip install gdown
 
 # arcface onnx
 gdown https://drive.google.com/uc?id=1l_ZcN1PmJK6kZC4K-ddM0nji3tTxmdKW

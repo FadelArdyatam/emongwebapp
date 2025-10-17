@@ -2512,11 +2512,10 @@
                     }
                 });
                 
-                // Fallback: jika tidak ada data emosi dari children/sessions,
-                // gunakan distribusi keseluruhan dari API khusus distribusi
-                if ((totalEmotions === 0 || Object.keys(emotionData).length === 0) && distributionData && distributionData.distribution) {
+                // Selalu gunakan data distribusi dari API khusus distribusi sebagai sumber utama
+                if (distributionData && distributionData.distribution) {
                     const dist = distributionData.distribution;
-                    updateEmotionChart({
+                    const finalEmotionData = {
                         happy: dist.happy || 0,
                         sad: dist.sad || 0,
                         angry: dist.angry || 0,
@@ -2524,7 +2523,18 @@
                         surprise: dist.surprise || 0,
                         disgust: dist.disgust || 0,
                         neutral: dist.neutral || 0
-                    });
+                    };
+                    
+                    // Update emotion data dengan data dari API distribusi
+                    Object.assign(emotionData, finalEmotionData);
+                    
+                    // Hitung ulang total dan positive emotions
+                    totalEmotions = Object.values(finalEmotionData).reduce((sum, count) => sum + count, 0);
+                    positiveEmotions = (finalEmotionData.happy || 0) + (finalEmotionData.surprise || 0);
+                    
+                    console.log('Using distribution API data:', finalEmotionData);
+                    console.log('Total emotions:', totalEmotions);
+                    console.log('Positive emotions:', positiveEmotions);
                 }
                 
                 // Tentukan emosi dominan
@@ -2541,9 +2551,29 @@
                 document.getElementById('weeklySessions').textContent = weeklySessions.length;
                 document.getElementById('totalSessions').textContent = totalSessions;
                 
-                // Update emotion chart
-                if (Object.keys(emotionData).length > 0) {
+                // Update emotion chart - selalu gunakan data dari distribution API
+                if (distributionData && distributionData.distribution) {
+                    const dist = distributionData.distribution;
+                    const finalEmotionData = {
+                        happy: dist.happy || 0,
+                        sad: dist.sad || 0,
+                        angry: dist.angry || 0,
+                        fear: dist.fear || 0,
+                        surprise: dist.surprise || 0,
+                        disgust: dist.disgust || 0,
+                        neutral: dist.neutral || 0
+                    };
+                    updateEmotionChart(finalEmotionData);
+                    console.log('Updated emotion chart with distribution data:', finalEmotionData);
+                } else if (Object.keys(emotionData).length > 0) {
                     updateEmotionChart(emotionData);
+                    console.log('Updated emotion chart with children data:', emotionData);
+                } else {
+                    // Default empty chart
+                    updateEmotionChart({
+                        happy: 0, sad: 0, angry: 0, fear: 0, surprise: 0, disgust: 0, neutral: 0
+                    });
+                    console.log('Updated emotion chart with empty data');
                 }
                 
                 showNotification('Data dashboard berhasil dimuat', 'success', 3000);
@@ -2945,9 +2975,21 @@
                     data.neutral || 0
                 ];
                 const total = values.reduce((a,b)=>a+b,0);
-                if(total === 0){ return; }
+                
+                console.log('Updating emotion chart with data:', data);
+                console.log('Values array:', values);
+                console.log('Total:', total);
+                
+                // Selalu update chart, bahkan jika total = 0
                 emotionChart.data.datasets[0].data = values;
                 emotionChart.update('none');
+                
+                // Tampilkan pesan jika tidak ada data
+                if (total === 0) {
+                    console.log('No emotion data available for chart');
+                }
+            } else {
+                console.error('Emotion chart not initialized!');
             }
         }
         
@@ -3246,33 +3288,38 @@
         function loadChildEmotionChart(childId) {
             console.log('Loading emotion chart for child:', childId);
             
-            fetch(`/api/parent/children/${childId}/emotions`, {
-                headers: {
-                    'Authorization': 'Bearer ' + localStorage.getItem('access_token')
-                }
-            })
-            .then(response => {
-                console.log('Emotion API response status:', response.status);
-                return response.json();
-            })
-            .then(data => {
-                console.log('Emotion data received:', data);
+            // Load both regular emotion data and temporal analysis
+            Promise.all([
+                fetch(`/api/parent/children/${childId}/emotions`, {
+                    headers: {
+                        'Authorization': 'Bearer ' + localStorage.getItem('access_token')
+                    }
+                }).then(response => response.json()),
+                fetch(`/api/parent/children/${childId}/temporal-analysis`, {
+                    headers: {
+                        'Authorization': 'Bearer ' + localStorage.getItem('access_token')
+                    }
+                }).then(response => response.json())
+            ])
+            .then(([emotionData, temporalData]) => {
+                console.log('Emotion data received:', emotionData);
+                console.log('Temporal analysis received:', temporalData);
                 
-                if (data.error) {
-                    console.error('Error loading emotion data:', data.error);
-                    showNotification('Gagal memuat data emosi: ' + data.error, 'danger');
+                if (emotionData.error) {
+                    console.error('Error loading emotion data:', emotionData.error);
+                    showNotification('Gagal memuat data emosi: ' + emotionData.error, 'danger');
                     return;
                 }
 
                 // Determine if there is any data to plot
-                const hasPerEmotion = Array.isArray(data.datasets) && data.datasets.length > 0;
+                const hasPerEmotion = Array.isArray(emotionData.datasets) && emotionData.datasets.length > 0;
                 let totalSum = 0;
                 if (hasPerEmotion) {
-                    data.datasets.forEach(ds => {
+                    emotionData.datasets.forEach(ds => {
                         (ds.data || []).forEach(v => { totalSum += (v || 0); });
                     });
                 } else {
-                    (data.values || []).forEach(v => { totalSum += (v || 0); });
+                    (emotionData.values || []).forEach(v => { totalSum += (v || 0); });
                 }
                 
                 // Create chart
@@ -3315,8 +3362,8 @@
                     window.childEmotionChartInstance = new Chart(ctx, {
                         type: hasPerEmotion ? 'bar' : 'line',
                         data: hasPerEmotion ? {
-                            labels: data.labels || [],
-                            datasets: (data.datasets || []).map(ds => ({
+                            labels: emotionData.labels || [],
+                            datasets: (emotionData.datasets || []).map(ds => ({
                                 label: ds.label,
                                 data: ds.data,
                                 backgroundColor: colors[ds.label] || '#fb923c',
@@ -3324,10 +3371,10 @@
                                 borderWidth: 1
                             }))
                         } : {
-                            labels: data.labels || [],
+                            labels: emotionData.labels || [],
                             datasets: [{
                                 label: 'Jumlah Deteksi Emosi',
-                                data: data.values || [],
+                                data: emotionData.values || [],
                                 borderColor: '#fb923c',
                                 backgroundColor: 'rgba(251, 146, 60, 0.1)',
                                 tension: 0.4,
@@ -3338,22 +3385,73 @@
                             responsive: true,
                             maintainAspectRatio: false,
                             scales: hasPerEmotion ? {
-                                x: { stacked: true },
-                                y: { stacked: true, beginAtZero: true, ticks: { precision: 0, stepSize: 1, maxTicksLimit: 6 } }
+                                x: { 
+                                    stacked: true,
+                                    title: {
+                                        display: true,
+                                        text: 'Tanggal'
+                                    }
+                                },
+                                y: { 
+                                    stacked: true, 
+                                    beginAtZero: true, 
+                                    ticks: { precision: 0, stepSize: 1, maxTicksLimit: 6 },
+                                    title: {
+                                        display: true,
+                                        text: 'Jumlah Deteksi'
+                                    }
+                                }
                             } : {
-                                y: { beginAtZero: true, ticks: { stepSize: 1, maxTicksLimit: 6 } }
+                                y: { 
+                                    beginAtZero: true, 
+                                    ticks: { stepSize: 1, maxTicksLimit: 6 },
+                                    title: {
+                                        display: true,
+                                        text: 'Jumlah Deteksi'
+                                    }
+                                },
+                                x: {
+                                    title: {
+                                        display: true,
+                                        text: 'Tanggal'
+                                    }
+                                }
                             },
                             plugins: {
                                 legend: {
                                     display: true,
                                     position: 'bottom'
+                                },
+                                tooltip: {
+                                    mode: 'index',
+                                    intersect: false,
+                                    callbacks: {
+                                        title: function(context) {
+                                            return 'Tanggal: ' + context[0].label;
+                                        },
+                                        label: function(context) {
+                                            return context.dataset.label + ': ' + context.parsed.y;
+                                        }
+                                    }
                                 }
                             },
-                            animation: false
+                            interaction: {
+                                mode: 'index',
+                                intersect: false
+                            },
+                            animation: {
+                                duration: 1000,
+                                easing: 'easeInOutQuart'
+                            }
                         }
                     });
                     
                     console.log('Chart created successfully');
+                    
+                    // Display temporal analysis insights
+                    if (temporalData.status === 'success') {
+                        displayTemporalInsights(temporalData);
+                    }
                 } else {
                     console.error('Canvas element childEmotionChart not found');
                 }
@@ -5606,10 +5704,296 @@
             };
         }
 
+        function displayTemporalInsights(temporalData) {
+            console.log('Displaying temporal insights:', temporalData);
+            
+            // Create or update temporal analysis section
+            let temporalSection = document.getElementById('temporalAnalysisSection');
+            if (!temporalSection) {
+                temporalSection = document.createElement('div');
+                temporalSection.id = 'temporalAnalysisSection';
+                temporalSection.className = 'card mt-4';
+                temporalSection.innerHTML = `
+                    <div class="card-header bg-gradient-primary text-white">
+                        <h5 class="mb-0"><i class="fas fa-chart-line me-2"></i>Analisis Temporal Emosi</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="temporalInsightsContent"></div>
+                    </div>
+                `;
+                
+                // Insert after emotion chart
+                const emotionChartContainer = document.querySelector('.card:has(#childEmotionChart)');
+                if (emotionChartContainer) {
+                    emotionChartContainer.parentNode.insertBefore(temporalSection, emotionChartContainer.nextSibling);
+                }
+            }
+            
+            const insightsContent = document.getElementById('temporalInsightsContent');
+            if (!insightsContent) return;
+            
+            const analysis = temporalData.temporal_analysis;
+            const prediction = temporalData.prediction;
+            
+            let insightsHTML = `
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card border-0 bg-light">
+                            <div class="card-body">
+                                <h6 class="card-title text-primary"><i class="fas fa-chart-bar me-2"></i>Analisis Volatilitas</h6>
+                                <p class="mb-1"><strong>Variance:</strong> ${analysis.volatility?.variance?.toFixed(3) || 'N/A'}</p>
+                                <p class="mb-1"><strong>Std Dev:</strong> ${analysis.volatility?.std_dev?.toFixed(3) || 'N/A'}</p>
+                                <p class="mb-0"><strong>Range:</strong> ${analysis.volatility?.range?.toFixed(3) || 'N/A'}</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card border-0 bg-light">
+                            <div class="card-body">
+                                <h6 class="card-title text-success"><i class="fas fa-chart-line me-2"></i>Analisis Tren</h6>
+                                <p class="mb-1"><strong>Direction:</strong> <span class="badge bg-${getTrendColor(analysis.trend?.overall_direction)}">${analysis.trend?.overall_direction || 'N/A'}</span></p>
+                                <p class="mb-1"><strong>Slope:</strong> ${analysis.trend?.linear_slope?.toFixed(3) || 'N/A'}</p>
+                                <p class="mb-0"><strong>R²:</strong> ${analysis.trend?.linear_r_squared?.toFixed(3) || 'N/A'}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row mt-3">
+                    <div class="col-md-6">
+                        <div class="card border-0 bg-light">
+                            <div class="card-body">
+                                <h6 class="card-title text-warning"><i class="fas fa-shield-alt me-2"></i>Stabilitas Emosi</h6>
+                                <p class="mb-1"><strong>Level:</strong> <span class="badge bg-${getStabilityColor(analysis.stability?.stability_level)}">${analysis.stability?.stability_level || 'N/A'}</span></p>
+                                <p class="mb-1"><strong>Std Dev:</strong> ${analysis.stability?.std_deviation?.toFixed(3) || 'N/A'}</p>
+                                <p class="mb-0"><strong>Stable:</strong> ${analysis.stability?.is_stable ? 'Ya' : 'Tidak'}</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card border-0 bg-light">
+                            <div class="card-body">
+                                <h6 class="card-title text-info"><i class="fas fa-crystal-ball me-2"></i>Prediksi Emosi</h6>
+                                <p class="mb-1"><strong>Prediksi:</strong> <span class="badge bg-primary">${prediction?.prediction || 'N/A'}</span></p>
+                                <p class="mb-1"><strong>Confidence:</strong> ${(prediction?.confidence * 100)?.toFixed(1) || 'N/A'}%</p>
+                                <p class="mb-0"><strong>Method:</strong> ${prediction?.method || 'N/A'}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Add pattern analysis if available
+            if (analysis.patterns) {
+                insightsHTML += `
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <div class="card border-0 bg-light">
+                                <div class="card-body">
+                                    <h6 class="card-title text-secondary"><i class="fas fa-puzzle-piece me-2"></i>Analisis Pola</h6>
+                                    <div class="row">
+                                        <div class="col-md-3">
+                                            <p class="mb-1"><strong>Repetitive:</strong> ${analysis.patterns.repetitive?.is_repetitive ? 'Ya' : 'Tidak'}</p>
+                                            <p class="mb-0"><strong>Dominant:</strong> ${analysis.patterns.repetitive?.dominant_emotion || 'N/A'}</p>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <p class="mb-1"><strong>Cyclical:</strong> ${analysis.patterns.cyclical?.is_cyclical ? 'Ya' : 'Tidak'}</p>
+                                            <p class="mb-0"><strong>Cycle Length:</strong> ${analysis.patterns.cyclical?.cycle_length || 'N/A'}</p>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <p class="mb-1"><strong>Escalating:</strong> ${analysis.patterns.escalating?.is_escalating ? 'Ya' : 'Tidak'}</p>
+                                            <p class="mb-0"><strong>Slope:</strong> ${analysis.patterns.escalating?.slope?.toFixed(3) || 'N/A'}</p>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <p class="mb-1"><strong>De-escalating:</strong> ${analysis.patterns.deescalating?.is_deescalating ? 'Ya' : 'Tidak'}</p>
+                                            <p class="mb-0"><strong>Slope:</strong> ${analysis.patterns.deescalating?.slope?.toFixed(3) || 'N/A'}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Add temporal chart if daily scores are available
+            if (temporalData.daily_scores && temporalData.daily_scores.length > 0) {
+                insightsHTML += `
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <div class="card border-0 bg-light">
+                                <div class="card-body">
+                                    <h6 class="card-title text-info"><i class="fas fa-chart-area me-2"></i>Tren Emosi Harian</h6>
+                                    <canvas id="temporalChart" height="100"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            insightsContent.innerHTML = insightsHTML;
+            
+            // Create temporal chart if data is available
+            if (temporalData.daily_scores && temporalData.daily_scores.length > 0) {
+                createTemporalChart(temporalData.daily_scores);
+            }
+        }
+        
+        function getTrendColor(direction) {
+            switch(direction) {
+                case 'strong_positive': return 'success';
+                case 'weak_positive': return 'info';
+                case 'strong_negative': return 'danger';
+                case 'weak_negative': return 'warning';
+                case 'stable': return 'secondary';
+                default: return 'light';
+            }
+        }
+        
+        function getStabilityColor(level) {
+            switch(level) {
+                case 'very_stable': return 'success';
+                case 'stable': return 'info';
+                case 'moderate': return 'warning';
+                case 'unstable': return 'danger';
+                case 'very_unstable': return 'danger';
+                default: return 'light';
+            }
+        }
+        
+        function createTemporalChart(dailyScores) {
+            const canvas = document.getElementById('temporalChart');
+            if (!canvas) return;
+            
+            // Sort by date
+            const sortedScores = dailyScores.sort((a, b) => new Date(a[0]) - new Date(b[0]));
+            
+            const labels = sortedScores.map(score => {
+                const date = new Date(score[0]);
+                return date.toLocaleDateString('id-ID', { month: 'short', day: 'numeric' });
+            });
+            
+            const data = sortedScores.map(score => score[1]);
+            
+            // Calculate trend line
+            const trendLine = calculateTrendLine(data);
+            
+            new Chart(canvas, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Skor Emosi Harian',
+                            data: data,
+                            borderColor: '#fb923c',
+                            backgroundColor: 'rgba(251, 146, 60, 0.1)',
+                            tension: 0.4,
+                            fill: true
+                        },
+                        {
+                            label: 'Tren',
+                            data: trendLine,
+                            borderColor: '#ef4444',
+                            backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                            borderDash: [5, 5],
+                            tension: 0.4,
+                            fill: false
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Skor Emosi'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Tanggal'
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top'
+                        },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false,
+                            callbacks: {
+                                title: function(context) {
+                                    return 'Tanggal: ' + context[0].label;
+                                },
+                                label: function(context) {
+                                    return context.dataset.label + ': ' + context.parsed.y.toFixed(3);
+                                }
+                            }
+                        }
+                    },
+                    interaction: {
+                        mode: 'index',
+                        intersect: false
+                    },
+                    animation: {
+                        duration: 1000,
+                        easing: 'easeInOutQuart'
+                    }
+                }
+            });
+        }
+        
+        function calculateTrendLine(data) {
+            if (data.length < 2) return data;
+            
+            const n = data.length;
+            const x = Array.from({length: n}, (_, i) => i);
+            const y = data;
+            
+            // Calculate linear regression
+            const sumX = x.reduce((a, b) => a + b, 0);
+            const sumY = y.reduce((a, b) => a + b, 0);
+            const sumXY = x.reduce((sum, xi, i) => sum + xi * y[i], 0);
+            const sumXX = x.reduce((sum, xi) => sum + xi * xi, 0);
+            
+            const slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
+            const intercept = (sumY - slope * sumX) / n;
+            
+            return x.map(xi => slope * xi + intercept);
+        }
+
         window.addEventListener('unhandledrejection', function(event) {
             console.error('Unhandled promise rejection:', event.reason);
             showNotification('Terjadi kesalahan pada operasi asinkron', 'danger');
         });
+
+        function showNotification(message, type = 'info') {
+            // Create notification element
+            const notification = document.createElement('div');
+            notification.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+            notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+            notification.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            
+            document.body.appendChild(notification);
+            
+            // Auto remove after 5 seconds
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.parentNode.removeChild(notification);
+                }
+            }, 5000);
+        }
 
         function logout() {
             localStorage.removeItem('access_token');

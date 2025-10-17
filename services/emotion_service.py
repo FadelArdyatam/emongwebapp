@@ -25,9 +25,9 @@ class EmotionProcessor:
         
         # Real-time optimization settings
         self.frame_skip_count = 0
-        self.frame_skip_threshold = 2  # Process every 3rd frame for performance
+        self.frame_skip_threshold = 1  # Process every 2nd frame instead of 3rd
         self.last_processing_time = 0
-        self.min_processing_interval = 0.05  # Minimum 50ms between processing
+        self.min_processing_interval = 0.02  # Minimum 20ms between processing (lebih cepat)
         
         # Face clustering integration
         self.face_clustering = FaceClustering()

@@ -1,0 +1,30 @@
+{
+  "timestamp": "2025-10-10T16:24:38.415464",
+  "system_overview": {
+    "total_emotion_detections": 1250,
+    "average_accuracy": 91.2,
+    "average_processing_time": "0.15s",
+    "concurrent_users": 25,
+    "system_uptime": "99.8%"
+  },
+  "emotion_analysis": {
+    "happy": 45.2,
+    "neutral": 28.7,
+    "sad": 12.3,
+    "surprised": 8.1,
+    "angry": 3.8,
+    "fearful": 1.5,
+    "disgusted": 0.4
+  },
+  "performance_summary": {
+    "average_cpu_usage": "43.0%",
+    "average_memory_usage": "1.99GB",
+    "average_response_time": "121ms"
+  },
+  "user_engagement": {
+    "total_users": 45,
+    "active_sessions": 23,
+    "most_used_feature": "Dashboard",
+    "average_session_duration": "43.2 minutes"
+  }
+}

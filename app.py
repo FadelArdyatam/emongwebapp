@@ -35,7 +35,7 @@ from validation_helpers import (
 
 # Simple in-memory throttle cache: {(session_id, student_id): last_ts}
 LOG_THROTTLE_CACHE = {}
-LOG_THROTTLE_SECONDS = 1.0
+LOG_THROTTLE_SECONDS = 0.1  # Kurangi dari 1.0 ke 0.1 detik untuk lebih banyak logging
 
 # Optional Redis integration
 REDIS_URL = os.environ.get('REDIS_URL', '').strip()
@@ -1290,9 +1290,25 @@ def analyze_emotion():
                     # Choose session: provided target or auto-monitoring per student
                     session_row = target_session
                     if not session_row:
-                        session_row = EmotionSession.query.filter_by(student_id=student.id, status='active', teacher_id=None).first()
+                        # Cek sesi auto monitoring hari ini
+                        from datetime import date
+                        today = date.today()
+                        session_row = EmotionSession.query.filter(
+                            EmotionSession.student_id == student.id,
+                            EmotionSession.status == 'active',
+                            EmotionSession.teacher_id == None,
+                            db.func.date(EmotionSession.created_at) == today
+                        ).first()
+                        
                         if not session_row:
-                            session_row = EmotionSession(student_id=student.id, teacher_id=None, session_name='Auto Monitoring', status='active')
+                            # Buat sesi auto monitoring baru untuk hari ini
+                            session_name = f'Auto Monitoring - {today.strftime("%Y-%m-%d")}'
+                            session_row = EmotionSession(
+                                student_id=student.id, 
+                                teacher_id=None, 
+                                session_name=session_name, 
+                                status='active'
+                            )
                             db.session.add(session_row)
                             db.session.commit()
                     # Throttle logging per (session_id, student_id)
@@ -2173,6 +2189,147 @@ def get_child_emotions(child_id):
             'labels': days,
             'values': flat_values,
             'datasets': datasets
+        }), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/parent/children/<int:child_id>/temporal-analysis')
+@jwt_required()
+@require_role(['orang_tua'])
+def get_child_temporal_analysis(child_id):
+    """API untuk mendapatkan analisis temporal emosi anak"""
+    try:
+        user_id = get_jwt_identity()
+        user_id = int(user_id) if user_id is not None else None
+        
+        # Check if parent has access to this child
+        parent_relation = StudentParent.query.filter_by(
+            parent_id=user_id, 
+            student_id=child_id
+        ).first()
+        
+        if not parent_relation:
+            return jsonify({'error': 'Access denied'}), 403
+            
+        # Get emotion data for temporal analysis
+        from datetime import datetime, timedelta
+        from services.advanced_temporal_service import advanced_temporal_service
+        
+        last_month = datetime.utcnow() - timedelta(days=30)
+        
+        emotion_logs = EmotionLog.query.join(EmotionSession).filter(
+            EmotionSession.student_id == child_id,
+            EmotionLog.detected_at >= last_month
+        ).order_by(EmotionLog.detected_at).all()
+        
+        if len(emotion_logs) < 3:
+            return jsonify({
+                'status': 'insufficient_data',
+                'message': 'Data emosi tidak mencukupi untuk analisis temporal',
+                'required_points': 3,
+                'available_points': len(emotion_logs)
+            }), 200
+        
+        # Extract emotion sequence
+        emotion_sequence = [log.emotion for log in emotion_logs]
+        
+        # Perform temporal analysis
+        temporal_analysis = advanced_temporal_service.analyze_emotion_sequences(emotion_sequence)
+        
+        # Get prediction
+        prediction = advanced_temporal_service.predict_next_emotion(emotion_sequence, method='markov')
+        
+        # Calculate daily trends
+        daily_emotions = {}
+        for log in emotion_logs:
+            day = log.detected_at.date().isoformat()
+            if day not in daily_emotions:
+                daily_emotions[day] = []
+            daily_emotions[day].append(log.emotion)
+        
+        # Calculate daily scores
+        daily_scores = []
+        for day, emotions in daily_emotions.items():
+            if emotions:
+                daily_score = sum(
+                    advanced_temporal_service.emotion_weights.get(emotion, 0) for emotion in emotions
+                ) / len(emotions)
+                daily_scores.append((day, daily_score))
+        
+        return jsonify({
+            'status': 'success',
+            'temporal_analysis': temporal_analysis,
+            'prediction': prediction,
+            'daily_scores': daily_scores,
+            'total_detections': len(emotion_logs),
+            'analysis_period': '30 hari terakhir'
+        }), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/guru/students/<int:student_id>/temporal-analysis')
+@jwt_required()
+@require_role(['guru'])
+def get_student_temporal_analysis(student_id):
+    """API untuk mendapatkan analisis temporal emosi siswa"""
+    try:
+        user_id = get_jwt_identity()
+        user_id = int(user_id) if user_id is not None else None
+        
+        # Get emotion data for temporal analysis
+        from datetime import datetime, timedelta
+        from services.advanced_temporal_service import advanced_temporal_service
+        
+        last_month = datetime.utcnow() - timedelta(days=30)
+        
+        emotion_logs = EmotionLog.query.join(EmotionSession).filter(
+            EmotionSession.student_id == student_id,
+            EmotionLog.detected_at >= last_month
+        ).order_by(EmotionLog.detected_at).all()
+        
+        if len(emotion_logs) < 3:
+            return jsonify({
+                'status': 'insufficient_data',
+                'message': 'Data emosi tidak mencukupi untuk analisis temporal',
+                'required_points': 3,
+                'available_points': len(emotion_logs)
+            }), 200
+        
+        # Extract emotion sequence
+        emotion_sequence = [log.emotion for log in emotion_logs]
+        
+        # Perform temporal analysis
+        temporal_analysis = advanced_temporal_service.analyze_emotion_sequences(emotion_sequence)
+        
+        # Get prediction
+        prediction = advanced_temporal_service.predict_next_emotion(emotion_sequence, method='markov')
+        
+        # Calculate daily trends
+        daily_emotions = {}
+        for log in emotion_logs:
+            day = log.detected_at.date().isoformat()
+            if day not in daily_emotions:
+                daily_emotions[day] = []
+            daily_emotions[day].append(log.emotion)
+        
+        # Calculate daily scores
+        daily_scores = []
+        for day, emotions in daily_emotions.items():
+            if emotions:
+                daily_score = sum(
+                    advanced_temporal_service.emotion_weights.get(emotion, 0) for emotion in emotions
+                ) / len(emotions)
+                daily_scores.append((day, daily_score))
+        
+        return jsonify({
+            'status': 'success',
+            'temporal_analysis': temporal_analysis,
+            'prediction': prediction,
+            'daily_scores': daily_scores,
+            'total_detections': len(emotion_logs),
+            'analysis_period': '30 hari terakhir'
         }), 200
         
     except Exception as e:
@@ -3099,14 +3256,35 @@ def get_parent_children():
                     app.logger.warning(f'Error getting last emotion for child {child.id}: {str(e)}')
                     last_emotion_log = None
                 
+                # Hitung distribusi emosi minggu ini - termasuk Auto Monitoring
+                try:
+                    emotion_stats = {}
+                    emotion_counts = db.session.query(
+                        EmotionLog.emotion,
+                        db.func.count(EmotionLog.id).label('count')
+                    ).join(EmotionSession).filter(
+                        EmotionSession.student_id == child.id,
+                        db.func.date(EmotionLog.detected_at) >= week_ago
+                    ).group_by(EmotionLog.emotion).all()
+                    
+                    for emotion, count in emotion_counts:
+                        emotion_stats[emotion] = int(count)
+                    
+                    app.logger.info(f"Child {child.id} emotion stats: {emotion_stats}")
+                except Exception as e:
+                    app.logger.warning(f'Error calculating emotion stats for child {child.id}: {str(e)}')
+                    emotion_stats = {}
+                
                 # Hitung skor emosi positif
                 try:
                     positive_count = db.session.query(EmotionLog).join(EmotionSession).filter(
                         EmotionSession.student_id == child.id,
-                        EmotionLog.emotion.in_(['happy', 'surprise'])
+                        EmotionLog.emotion.in_(['happy', 'surprise']),
+                        db.func.date(EmotionLog.detected_at) >= week_ago
                     ).count()
                     total_count = db.session.query(EmotionLog).join(EmotionSession).filter(
-                        EmotionSession.student_id == child.id
+                        EmotionSession.student_id == child.id,
+                        db.func.date(EmotionLog.detected_at) >= week_ago
                     ).count()
                     avg_emotion_score = (positive_count / total_count * 100) if total_count > 0 else 0
                 except Exception as e:
@@ -3132,7 +3310,8 @@ def get_parent_children():
                     'weekly_sessions': weekly_sessions,
                     'last_emotion': last_emotion_log.emotion if last_emotion_log else None,
                     'avg_emotion_score': round(avg_emotion_score, 1),
-                    'last_session': last_session_str
+                    'last_session': last_session_str,
+                    'emotion_stats': emotion_stats  # Tambahkan distribusi emosi
                 })
                 
                 children_data.append(child_dict)
@@ -3153,6 +3332,103 @@ def get_parent_children():
     except Exception as e:
         app.logger.exception('get_parent_children failed')
         return jsonify(create_error_response(f'Terjadi kesalahan server: {str(e)}', 500))
+
+@app.route('/parent/children/summary')
+@jwt_required()
+@require_role(['orang_tua'])
+def get_parent_children_summary():
+    """API untuk mendapatkan summary anak-anak orang tua"""
+    try:
+        from datetime import date, timedelta
+        user_id = get_jwt_identity()
+        
+        # Validasi user_id
+        if not user_id:
+            return jsonify({'status': 'error', 'message': 'User ID tidak ditemukan dalam token'}), 401
+        
+        try:
+            user_id = int(user_id)
+        except (ValueError, TypeError):
+            return jsonify({'status': 'error', 'message': 'User ID tidak valid'}), 400
+        
+        # Cek apakah user masih aktif
+        user = User.query.get(user_id)
+        if not user or not user.is_active:
+            return jsonify({'status': 'error', 'message': 'User tidak aktif'}), 403
+        
+        # Ambil parameter days
+        days = request.args.get('days', 7, type=int)
+        if days <= 0:
+            days = 7
+        
+        # Ambil semua anak dari orang tua ini
+        children = db.session.query(Student).join(StudentParent).filter(
+            StudentParent.parent_id == user_id,
+            Student.is_active == True
+        ).all()
+        
+        children_summary = []
+        period_start = date.today() - timedelta(days=days)
+        
+        for child in children:
+            try:
+                # Hitung sesi dalam periode
+                sessions_count = db.session.query(EmotionSession).filter(
+                    EmotionSession.student_id == child.id,
+                    db.or_(
+                        db.func.date(EmotionSession.start_time) >= period_start,
+                        db.func.date(EmotionSession.created_at) >= period_start
+                    )
+                ).count()
+                
+                # Ambil emosi terakhir
+                last_emotion_log = db.session.query(EmotionLog).join(EmotionSession).filter(
+                    EmotionSession.student_id == child.id
+                ).order_by(EmotionLog.detected_at.desc()).first()
+                
+                # Hitung rata-rata skor emosi dalam periode
+                emotion_logs = db.session.query(EmotionLog).join(EmotionSession).filter(
+                    EmotionSession.student_id == child.id,
+                    EmotionLog.detected_at >= period_start
+                ).all()
+                
+                avg_score = 0
+                if emotion_logs:
+                    total_score = sum(log.confidence for log in emotion_logs)
+                    avg_score = total_score / len(emotion_logs)
+                
+                # Hitung distribusi emosi
+                emotion_counts = {}
+                for log in emotion_logs:
+                    emotion = log.emotion
+                    emotion_counts[emotion] = emotion_counts.get(emotion, 0) + 1
+                
+                child_summary = {
+                    'id': child.id,
+                    'name': child.full_name,
+                    'sessions_count': sessions_count,
+                    'last_emotion': last_emotion_log.emotion if last_emotion_log else None,
+                    'avg_confidence': round(avg_score, 2),
+                    'emotion_distribution': emotion_counts,
+                    'period_days': days
+                }
+                
+                children_summary.append(child_summary)
+                
+            except Exception as e:
+                app.logger.error(f'Error processing child {child.id} for summary: {str(e)}')
+                continue
+        
+        return jsonify({
+            'status': 'success',
+            'children_summary': children_summary,
+            'total_children': len(children_summary),
+            'period_days': days
+        }), 200
+        
+    except Exception as e:
+        app.logger.exception('get_parent_children_summary failed')
+        return jsonify({'status': 'error', 'message': f'Terjadi kesalahan server: {str(e)}'}), 500
 
 @app.route('/api/parent/distribution')
 @jwt_required()

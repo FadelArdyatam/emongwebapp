@@ -1,0 +1,46 @@
+{
+  "timestamp": "2025-10-10T17:09:46.721134",
+  "model_info": {
+    "emotion_labels": [
+      "angry",
+      "disgusted",
+      "fearful",
+      "happy",
+      "sad",
+      "surprised",
+      "neutral"
+    ],
+    "confidence_threshold": 0.7,
+    "total_detections": 288,
+    "time_period": "2025-10-09 17:08:40.422765 to 2025-10-10 17:03:40.422765"
+  },
+  "performance_metrics": {
+    "average_processing_time": 0.13780515739707433,
+    "average_confidence": 0.8045290814841781,
+    "face_detection_accuracy": 89.64759984489939,
+    "emotion_accuracy": 89.64759984489939,
+    "true_positive_rate": 89.6692719732592,
+    "false_positive_rate": 3.038375284813796
+  },
+  "emotion_distribution": {
+    "fearful": 15,
+    "happy": 108,
+    "sad": 50,
+    "surprised": 30,
+    "neutral": 58,
+    "angry": 21,
+    "disgusted": 6
+  },
+  "confidence_statistics": {
+    "min_confidence": 0.6472411976218265,
+    "max_confidence": 0.9732438817928841,
+    "std_confidence": 0.0633119701773194,
+    "high_confidence_detections": 273
+  },
+  "processing_statistics": {
+    "min_processing_time": 0.0689215773019609,
+    "max_processing_time": 0.23334939124657322,
+    "std_processing_time": 0.030495631618177657,
+    "fast_detections": 197
+  }
+}

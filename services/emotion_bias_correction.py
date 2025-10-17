@@ -10,47 +10,51 @@ logger = logging.getLogger(__name__)
 
 class EmotionBiasCorrection:
     def __init__(self):
-        # Confidence thresholds untuk setiap emosi
+        # Confidence thresholds untuk setiap emosi - EXTREME BOOST FEAR, ANGRY & SURPRISED
         self.confidence_thresholds = {
-            'happy': 0.6,
-            'sad': 0.7,      
-            'angry': 0.65,
-            'fear': 0.65,
-            'surprise': 0.6,
-            'disgust': 0.65,
-            'neutral': 0.4   
+            'happy': 0.9,    # Tingkatkan threshold happy lebih tinggi lagi
+            'sad': 0.95,     # Tingkatkan threshold sad lebih tinggi lagi
+            'angry': 0.05,   # EXTREME RENDAH - angry sangat mudah terdeteksi
+            'fear': 0.1,     # EXTREME RENDAH - fear sangat mudah terdeteksi
+            'surprise': 0.05, # EXTREME RENDAH - surprised sangat mudah terdeteksi
+            'disgust': 0.2,  # Turunkan threshold disgust lebih jauh
+            'neutral': 0.9   # TINGKATKAN threshold neutral lebih tinggi lagi
         }
         
         # Historical context untuk smoothing
         self.emotion_history = deque(maxlen=10)
         self.confidence_history = deque(maxlen=10)
         
-        # Bias correction weights
+        # Bias correction weights - EXTREME BOOST FEAR, ANGRY & SURPRISED
         self.bias_weights = {
-            'sad': 0.8,      # Reduce sad predictions
-            'neutral': 1.2,  # Boost neutral predictions
-            'happy': 1.1,    # Slight boost for happy
-            'angry': 0.9,    # Slight reduce for angry
-            'fear': 0.9,     # Slight reduce for fear
-            'disgust': 0.9,  # Slight reduce for disgust
-            'surprise': 1.0  # No change for surprise
+            'sad': 0.2,      # Lebih agresif reduce sad
+            'neutral': 0.3,  # KURANGI boost neutral lebih drastis
+            'happy': 0.6,    # Kurangi boost happy lebih drastis
+            'angry': 3.0,    # EXTREME BOOST ANGRY
+            'fear': 2.5,     # EXTREME BOOST FEAR
+            'disgust': 1.3,  # Boost disgust predictions
+            'surprise': 3.0  # EXTREME BOOST SURPRISED
         }
         
-        # Context-based corrections
+        # Context-based corrections - EXTREME BOOST FEAR, ANGRY & SURPRISED
         self.context_rules = {
             'classroom': {
-                'sad': 0.7,      # Reduce sad in classroom
-                'neutral': 1.3,  # Boost neutral in classroom
-                'happy': 1.1,    # Slight boost happy
-                'angry': 0.8,    # Reduce angry
-                'fear': 0.8      # Reduce fear
+                'sad': 0.1,      # Lebih agresif reduce sad
+                'neutral': 0.2,  # KURANGI boost neutral lebih drastis
+                'happy': 0.5,    # Kurangi boost happy lebih drastis
+                'angry': 2.5,    # EXTREME BOOST ANGRY di classroom
+                'fear': 2.0,     # EXTREME BOOST FEAR di classroom
+                'disgust': 1.2,  # Boost disgust detection
+                'surprise': 2.5  # EXTREME BOOST SURPRISED di classroom
             },
             'home': {
-                'sad': 0.9,      # Less reduction at home
-                'neutral': 1.1,  # Less boost at home
-                'happy': 1.2,    # More boost happy at home
-                'angry': 0.9,    # Less reduction at home
-                'fear': 0.9      # Less reduction at home
+                'sad': 0.2,      # Lebih agresif reduce sad
+                'neutral': 0.3,  # KURANGI boost neutral lebih drastis
+                'happy': 0.7,    # Kurangi boost happy
+                'angry': 2.2,    # EXTREME BOOST ANGRY di home
+                'fear': 1.8,     # EXTREME BOOST FEAR di home
+                'disgust': 1.1,  # Boost disgust detection di home
+                'surprise': 2.2  # EXTREME BOOST SURPRISED di home
             }
         }
 
@@ -122,11 +126,56 @@ class EmotionBiasCorrection:
             }
 
     def _apply_bias_weights(self, emotion_scores: Dict[str, float]) -> Dict[str, float]:
-        """Apply bias correction weights"""
+        """Apply bias correction weights dengan penalty untuk happy/sad dan boost untuk surprise/disgust/angry"""
         corrected = {}
         for emotion, score in emotion_scores.items():
             weight = self.bias_weights.get(emotion, 1.0)
-            corrected[emotion] = min(1.0, score * weight)
+            
+            # Penalty khusus untuk sad dan happy - kurangi score secara drastis
+            if emotion == 'sad':
+                if score > 0.6:
+                    corrected[emotion] = score * 0.2  # Kurangi drastis
+                else:
+                    corrected[emotion] = score * weight
+            elif emotion == 'happy':
+                if score > 0.7:  # Jika happy score sangat tinggi
+                    corrected[emotion] = score * 0.8  # Kurangi sedikit
+                else:
+                    corrected[emotion] = score * weight
+            # Penalty khusus untuk neutral - kurangi score jika ada emosi lain yang tinggi
+            elif emotion == 'neutral':
+                other_emotions = {k: v for k, v in emotion_scores.items() if k != 'neutral'}
+                max_other_score = max(other_emotions.values()) if other_emotions else 0
+                if max_other_score > 0.4:  # Jika ada emosi lain yang cukup tinggi
+                    corrected[emotion] = score * 0.5  # Kurangi neutral drastis
+                else:
+                    corrected[emotion] = score * weight
+            # EXTREME BOOST untuk angry - SANGAT AGRESIF
+            elif emotion == 'angry':
+                if score > 0.05:  # Jika ada sedikit indikasi angry
+                    corrected[emotion] = min(1.0, score * weight * 2.5)  # EXTREME boost
+                else:
+                    corrected[emotion] = score * weight
+            # EXTREME BOOST untuk fear - SANGAT AGRESIF
+            elif emotion == 'fear':
+                if score > 0.05:  # Jika ada sedikit indikasi fear
+                    corrected[emotion] = min(1.0, score * weight * 2.2)  # EXTREME boost
+                else:
+                    corrected[emotion] = score * weight
+            # EXTREME BOOST untuk surprise - SANGAT AGRESIF
+            elif emotion == 'surprise':
+                if score > 0.05:  # Jika ada sedikit indikasi surprise
+                    corrected[emotion] = min(1.0, score * weight * 2.5)  # EXTREME boost
+                else:
+                    corrected[emotion] = score * weight
+            # Boost khusus untuk disgust
+            elif emotion == 'disgust':
+                if score > 0.1:  # Jika ada indikasi disgust
+                    corrected[emotion] = min(1.0, score * weight * 1.4)  # Extra boost
+                else:
+                    corrected[emotion] = score * weight
+            else:
+                corrected[emotion] = min(1.0, score * weight)
         return corrected
 
     def _apply_context_corrections(self, emotion_scores: Dict[str, float], context: str) -> Dict[str, float]:
@@ -184,12 +233,43 @@ class EmotionBiasCorrection:
         if confidence < 0.3:
             return 'neutral', 0.5
         
-        # Rule 2: Jika sad dengan confidence tinggi tapi ada happy yang cukup tinggi, 
-        # pertimbangkan untuk pilih happy
-        if emotion == 'sad' and confidence > 0.7:
-            happy_score = corrected_scores.get('happy', 0)
-            if happy_score > 0.6:
-                return 'happy', happy_score
+        # Rule 2: EXTREME AGRESIF - prioritaskan angry, fear, dan surprised
+        if emotion in ['sad', 'happy', 'neutral']:
+            # Cek angry dulu - PRIORITAS TERTINGGI
+            if 'angry' in corrected_scores:
+                angry_score = corrected_scores['angry']
+                if angry_score > 0.05:  # Threshold EXTREME rendah untuk angry
+                    return 'angry', angry_score
+            
+            # Cek fear - PRIORITAS KEDUA
+            if 'fear' in corrected_scores:
+                fear_score = corrected_scores['fear']
+                if fear_score > 0.05:  # Threshold EXTREME rendah untuk fear
+                    return 'fear', fear_score
+            
+            # Cek surprised - PRIORITAS KETIGA
+            if 'surprise' in corrected_scores:
+                surprise_score = corrected_scores['surprise']
+                if surprise_score > 0.05:  # Threshold EXTREME rendah untuk surprised
+                    return 'surprise', surprise_score
+            
+            # Cek disgust
+            if 'disgust' in corrected_scores:
+                disgust_score = corrected_scores['disgust']
+                if disgust_score > 0.1:  # Threshold rendah untuk disgust
+                    return 'disgust', disgust_score
+            
+            # Cek emosi lain jika priority emotions tidak ada
+            other_emotions = {k: v for k, v in corrected_scores.items() if k not in ['sad', 'happy', 'neutral']}
+            if other_emotions:
+                best_other = max(other_emotions.items(), key=lambda x: x[1])
+                # Pilih emosi lain jika score > 0.1
+                if best_other[1] > 0.1:
+                    return best_other[0], best_other[1]
+            
+            # Jika tetap harus pilih sad/happy/neutral, pastikan confidence SANGAT tinggi
+            if confidence < 0.98:
+                return 'angry', 0.8  # Default ke angry jika confidence rendah
         
         # Rule 3: Jika neutral dengan confidence rendah tapi ada emosi lain yang cukup tinggi,
         # pilih emosi lain tersebut

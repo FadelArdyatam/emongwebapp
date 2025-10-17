@@ -1,0 +1,423 @@
+{
+  "results": [
+    {
+      "test_case": {
+        "name": "High Surprise Score",
+        "scores": {
+          "happy": 0.3,
+          "sad": 0.2,
+          "angry": 0.2,
+          "fear": 0.1,
+          "surprise": 0.6,
+          "disgust": 0.2,
+          "neutral": 0.3
+        },
+        "context": "classroom",
+        "expected": "surprise"
+      },
+      "result": {
+        "emotion": "surprise",
+        "confidence": 1.0,
+        "original_emotion": "surprise",
+        "correction_applied": true,
+        "corrected_scores": {
+          "happy": 0.12150000000000001,
+          "sad": 0.012000000000000002,
+          "angry": 0.182,
+          "fear": 0.05,
+          "surprise": 1.0,
+          "disgust": 0.42000000000000004,
+          "neutral": 0.165
+        },
+        "bias_correction_factors": {
+          "happy": 0.405,
+          "sad": 0.060000000000000005,
+          "angry": 0.9099999999999999,
+          "fear": 0.5,
+          "surprise": 1.6666666666666667,
+          "disgust": 2.1,
+          "neutral": 0.55
+        }
+      },
+      "expected_met": true
+    },
+    {
+      "test_case": {
+        "name": "Surprise vs Happy Competition",
+        "scores": {
+          "happy": 0.5,
+          "sad": 0.2,
+          "angry": 0.2,
+          "fear": 0.1,
+          "surprise": 0.4,
+          "disgust": 0.2,
+          "neutral": 0.3
+        },
+        "context": "classroom",
+        "expected": "surprise"
+      },
+      "result": {
+        "emotion": "surprise",
+        "confidence": 0.7488,
+        "original_emotion": "happy",
+        "correction_applied": true,
+        "corrected_scores": {
+          "happy": 0.2025,
+          "sad": 0.012000000000000002,
+          "angry": 0.182,
+          "fear": 0.05,
+          "surprise": 0.7488,
+          "disgust": 0.42000000000000004,
+          "neutral": 0.165
+        },
+        "bias_correction_factors": {
+          "happy": 0.405,
+          "sad": 0.060000000000000005,
+          "angry": 0.9099999999999999,
+          "fear": 0.5,
+          "surprise": 1.8719999999999999,
+          "disgust": 2.1,
+          "neutral": 0.55
+        }
+      },
+      "expected_met": true
+    },
+    {
+      "test_case": {
+        "name": "High Disgust Score",
+        "scores": {
+          "happy": 0.2,
+          "sad": 0.2,
+          "angry": 0.2,
+          "fear": 0.1,
+          "surprise": 0.1,
+          "disgust": 0.7,
+          "neutral": 0.3
+        },
+        "context": "classroom",
+        "expected": "disgust"
+      },
+      "result": {
+        "emotion": "disgust",
+        "confidence": 1.0,
+        "original_emotion": "disgust",
+        "correction_applied": true,
+        "corrected_scores": {
+          "happy": 0.08100000000000002,
+          "sad": 0.012000000000000002,
+          "angry": 0.182,
+          "fear": 0.05,
+          "surprise": 0.078,
+          "disgust": 1.0,
+          "neutral": 0.165
+        },
+        "bias_correction_factors": {
+          "happy": 0.4050000000000001,
+          "sad": 0.060000000000000005,
+          "angry": 0.9099999999999999,
+          "fear": 0.5,
+          "surprise": 0.7799999999999999,
+          "disgust": 1.4285714285714286,
+          "neutral": 0.55
+        }
+      },
+      "expected_met": true
+    },
+    {
+      "test_case": {
+        "name": "Disgust vs Sad Competition",
+        "scores": {
+          "happy": 0.2,
+          "sad": 0.5,
+          "angry": 0.2,
+          "fear": 0.1,
+          "surprise": 0.1,
+          "disgust": 0.4,
+          "neutral": 0.3
+        },
+        "context": "classroom",
+        "expected": "disgust"
+      },
+      "result": {
+        "emotion": "disgust",
+        "confidence": 1.0,
+        "original_emotion": "sad",
+        "correction_applied": true,
+        "corrected_scores": {
+          "happy": 0.08100000000000002,
+          "sad": 0.03,
+          "angry": 0.182,
+          "fear": 0.05,
+          "surprise": 0.078,
+          "disgust": 1.0,
+          "neutral": 0.165
+        },
+        "bias_correction_factors": {
+          "happy": 0.4050000000000001,
+          "sad": 0.06,
+          "angry": 0.9099999999999999,
+          "fear": 0.5,
+          "surprise": 0.7799999999999999,
+          "disgust": 2.5,
+          "neutral": 0.55
+        }
+      },
+      "expected_met": true
+    },
+    {
+      "test_case": {
+        "name": "High Angry Score",
+        "scores": {
+          "happy": 0.2,
+          "sad": 0.2,
+          "angry": 0.6,
+          "fear": 0.1,
+          "surprise": 0.1,
+          "disgust": 0.2,
+          "neutral": 0.3
+        },
+        "context": "classroom",
+        "expected": "angry"
+      },
+      "result": {
+        "emotion": "angry",
+        "confidence": 1.0,
+        "original_emotion": "angry",
+        "correction_applied": true,
+        "corrected_scores": {
+          "happy": 0.08100000000000002,
+          "sad": 0.012000000000000002,
+          "angry": 1.0,
+          "fear": 0.05,
+          "surprise": 0.078,
+          "disgust": 0.42000000000000004,
+          "neutral": 0.165
+        },
+        "bias_correction_factors": {
+          "happy": 0.4050000000000001,
+          "sad": 0.060000000000000005,
+          "angry": 1.6666666666666667,
+          "fear": 0.5,
+          "surprise": 0.7799999999999999,
+          "disgust": 2.1,
+          "neutral": 0.55
+        }
+      },
+      "expected_met": true
+    },
+    {
+      "test_case": {
+        "name": "Angry vs Happy Competition",
+        "scores": {
+          "happy": 0.5,
+          "sad": 0.2,
+          "angry": 0.4,
+          "fear": 0.1,
+          "surprise": 0.1,
+          "disgust": 0.2,
+          "neutral": 0.3
+        },
+        "context": "classroom",
+        "expected": "angry"
+      },
+      "result": {
+        "emotion": "angry",
+        "confidence": 0.8735999999999999,
+        "original_emotion": "happy",
+        "correction_applied": true,
+        "corrected_scores": {
+          "happy": 0.2025,
+          "sad": 0.012000000000000002,
+          "angry": 0.8735999999999999,
+          "fear": 0.05,
+          "surprise": 0.078,
+          "disgust": 0.42000000000000004,
+          "neutral": 0.165
+        },
+        "bias_correction_factors": {
+          "happy": 0.405,
+          "sad": 0.060000000000000005,
+          "angry": 2.1839999999999997,
+          "fear": 0.5,
+          "surprise": 0.7799999999999999,
+          "disgust": 2.1,
+          "neutral": 0.55
+        }
+      },
+      "expected_met": true
+    },
+    {
+      "test_case": {
+        "name": "High Happy Score (Bias Test)",
+        "scores": {
+          "happy": 0.8,
+          "sad": 0.2,
+          "angry": 0.3,
+          "fear": 0.1,
+          "surprise": 0.2,
+          "disgust": 0.2,
+          "neutral": 0.4
+        },
+        "context": "classroom",
+        "expected": "NOT happy"
+      },
+      "result": {
+        "emotion": "angry",
+        "confidence": 0.546,
+        "original_emotion": "happy",
+        "correction_applied": true,
+        "corrected_scores": {
+          "happy": 0.2880000000000001,
+          "sad": 0.012000000000000002,
+          "angry": 0.546,
+          "fear": 0.05,
+          "surprise": 0.156,
+          "disgust": 0.42000000000000004,
+          "neutral": 0.22000000000000003
+        },
+        "bias_correction_factors": {
+          "happy": 0.3600000000000001,
+          "sad": 0.060000000000000005,
+          "angry": 1.8200000000000003,
+          "fear": 0.5,
+          "surprise": 0.7799999999999999,
+          "disgust": 2.1,
+          "neutral": 0.55
+        }
+      },
+      "expected_met": true
+    },
+    {
+      "test_case": {
+        "name": "High Sad Score (Bias Test)",
+        "scores": {
+          "happy": 0.2,
+          "sad": 0.7,
+          "angry": 0.3,
+          "fear": 0.1,
+          "surprise": 0.2,
+          "disgust": 0.2,
+          "neutral": 0.4
+        },
+        "context": "classroom",
+        "expected": "NOT sad"
+      },
+      "result": {
+        "emotion": "angry",
+        "confidence": 0.546,
+        "original_emotion": "sad",
+        "correction_applied": true,
+        "corrected_scores": {
+          "happy": 0.08100000000000002,
+          "sad": 0.020999999999999998,
+          "angry": 0.546,
+          "fear": 0.05,
+          "surprise": 0.156,
+          "disgust": 0.42000000000000004,
+          "neutral": 0.22000000000000003
+        },
+        "bias_correction_factors": {
+          "happy": 0.4050000000000001,
+          "sad": 0.03,
+          "angry": 1.8200000000000003,
+          "fear": 0.5,
+          "surprise": 0.7799999999999999,
+          "disgust": 2.1,
+          "neutral": 0.55
+        }
+      },
+      "expected_met": true
+    },
+    {
+      "test_case": {
+        "name": "Mixed Emotions - All High",
+        "scores": {
+          "happy": 0.5,
+          "sad": 0.4,
+          "angry": 0.5,
+          "fear": 0.3,
+          "surprise": 0.4,
+          "disgust": 0.5,
+          "neutral": 0.4
+        },
+        "context": "classroom",
+        "expected": "priority_emotion"
+      },
+      "result": {
+        "emotion": "angry",
+        "confidence": 1.0,
+        "original_emotion": "happy",
+        "correction_applied": true,
+        "corrected_scores": {
+          "happy": 0.2025,
+          "sad": 0.024000000000000004,
+          "angry": 1.0,
+          "fear": 0.15,
+          "surprise": 0.7488,
+          "disgust": 1.0,
+          "neutral": 0.22000000000000003
+        },
+        "bias_correction_factors": {
+          "happy": 0.405,
+          "sad": 0.060000000000000005,
+          "angry": 2.0,
+          "fear": 0.5,
+          "surprise": 1.8719999999999999,
+          "disgust": 2.0,
+          "neutral": 0.55
+        }
+      },
+      "expected_met": true
+    },
+    {
+      "test_case": {
+        "name": "Home Context - Surprise vs Happy",
+        "scores": {
+          "happy": 0.6,
+          "sad": 0.2,
+          "angry": 0.2,
+          "fear": 0.1,
+          "surprise": 0.5,
+          "disgust": 0.2,
+          "neutral": 0.3
+        },
+        "context": "home",
+        "expected": "surprise"
+      },
+      "result": {
+        "emotion": "surprise",
+        "confidence": 1.0,
+        "original_emotion": "happy",
+        "correction_applied": true,
+        "corrected_scores": {
+          "happy": 0.29700000000000004,
+          "sad": 0.016000000000000004,
+          "angry": 0.16799999999999998,
+          "fear": 0.05,
+          "surprise": 1.0,
+          "disgust": 0.39000000000000007,
+          "neutral": 0.15
+        },
+        "bias_correction_factors": {
+          "happy": 0.4950000000000001,
+          "sad": 0.08000000000000002,
+          "angry": 0.8399999999999999,
+          "fear": 0.5,
+          "surprise": 2.0,
+          "disgust": 1.9500000000000002,
+          "neutral": 0.5
+        }
+      },
+      "expected_met": true
+    }
+  ],
+  "emotion_counts": {
+    "surprise": 3,
+    "disgust": 2,
+    "angry": 5
+  },
+  "expected_met_count": 10,
+  "priority_emotion_count": 10,
+  "happy_sad_avoided_count": 10,
+  "total_cases": 10
+}

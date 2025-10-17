@@ -22,7 +22,7 @@ class EmotionPredictionService:
             'sad': -0.8,
             'angry': -1.0,
             'fear': -0.9,
-            'disgust': -0.7
+            'disgust': -0.9  # Tingkatkan sensitivitas disgust dari -0.7 ke -0.9
         }
         
         self.prediction_window = 7  # days
