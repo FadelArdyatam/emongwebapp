@@ -10,30 +10,30 @@ logger = logging.getLogger(__name__)
 
 class EmotionBiasCorrection:
     def __init__(self):
-        # Confidence thresholds untuk setiap emosi - EXTREME BOOST FEAR, ANGRY & SURPRISED
+        # Confidence thresholds untuk setiap emosi - NORMAL CONFIGURATION
         self.confidence_thresholds = {
-            'happy': 0.9,    # Tingkatkan threshold happy lebih tinggi lagi
-            'sad': 0.95,     # Tingkatkan threshold sad lebih tinggi lagi
-            'angry': 0.05,   # EXTREME RENDAH - angry sangat mudah terdeteksi
-            'fear': 0.1,     # EXTREME RENDAH - fear sangat mudah terdeteksi
-            'surprise': 0.05, # EXTREME RENDAH - surprised sangat mudah terdeteksi
-            'disgust': 0.2,  # Turunkan threshold disgust lebih jauh
-            'neutral': 0.9   # TINGKATKAN threshold neutral lebih tinggi lagi
+            'happy': 0.3,    # Threshold normal untuk happy
+            'sad': 0.6,      # Threshold tinggi untuk sad (kurangi false positive)
+            'angry': 0.4,    # Threshold normal untuk angry
+            'fear': 0.5,     # Threshold normal untuk fear
+            'surprise': 0.3, # Threshold normal untuk surprise
+            'disgust': 0.4,  # Threshold normal untuk disgust
+            'neutral': 0.2   # Threshold rendah untuk neutral (prioritaskan neutral)
         }
         
         # Historical context untuk smoothing
         self.emotion_history = deque(maxlen=10)
         self.confidence_history = deque(maxlen=10)
         
-        # Bias correction weights - EXTREME BOOST FEAR, ANGRY & SURPRISED
+        # Bias correction weights - NORMAL CONFIGURATION
         self.bias_weights = {
-            'sad': 0.2,      # Lebih agresif reduce sad
-            'neutral': 0.3,  # KURANGI boost neutral lebih drastis
-            'happy': 0.6,    # Kurangi boost happy lebih drastis
-            'angry': 3.0,    # EXTREME BOOST ANGRY
-            'fear': 2.5,     # EXTREME BOOST FEAR
-            'disgust': 1.3,  # Boost disgust predictions
-            'surprise': 3.0  # EXTREME BOOST SURPRISED
+            'sad': 0.3,      # Kurangi sad (bias model ke sad)
+            'neutral': 1.5,  # Boost neutral (prioritaskan neutral)
+            'happy': 1.2,    # Boost happy sedikit
+            'angry': 1.0,    # Normal weight untuk angry
+            'fear': 1.0,     # Normal weight untuk fear
+            'disgust': 1.0,  # Normal weight untuk disgust
+            'surprise': 1.1  # Boost surprise sedikit
         }
         
         # Context-based corrections - EXTREME BOOST FEAR, ANGRY & SURPRISED

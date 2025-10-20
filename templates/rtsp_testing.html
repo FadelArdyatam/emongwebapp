@@ -848,7 +848,7 @@
                     } else if (image.emotion.type === 'single_person') {
                         emotionDisplay = `
                             <span class="badge bg-success">${image.emotion.emotion}</span>
-                            <small class="text-muted">(${Math.round(image.emotion.confidence * 100)}%)</small>
+                            <small class="text-muted">(${Math.round(image.emotion.confidence_score * 100)}%)</small>
                         `;
                     } else if (image.emotion.type === 'multi_person') {
                         emotionDisplay = `

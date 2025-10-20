@@ -16,6 +16,7 @@ from collections import deque, Counter
 from deepface import DeepFace
 from services.detector_retinaface_onnx import extract_faces_with_retinaface_onnx
 from services.onnx_runtime_service import init_onnx_models, arcface_embed, predict_emotion
+from services.emotion_bias_correction import emotion_bias_correction
 from services.embedding_cache import EmbeddingCache
 from config import Config
 from models import db, User, Student, EmotionSession, EmotionLog, StudentTeacher, StudentParent
@@ -26,6 +27,10 @@ from services.database_service import DatabaseService
 from services.emotion_service import emotion_processor, emotion_aggregator
 from services.websocket_service import init_websocket_service
 from services.data_compression_service import init_data_compression_service
+from services.worker_service import WorkerService, send_email_to_parent, send_push_notification_to_parent
+from services.cache_service import cache_service
+from services.realtime_dashboard_service import init_realtime_service
+from services.mental_health_service import mental_health_service
 from api.optimized_routes import api_bp, init_services
 from validation_helpers import (
     validate_required_fields, validate_student_code, validate_relationship,
@@ -105,7 +110,7 @@ app.config.from_object(Config)
 db.init_app(app)
 migrate = Migrate(app, db)
 jwt = JWTManager(app)
-socketio = SocketIO(app, cors_allowed_origins='*')
+socketio = SocketIO(app, cors_allowed_origins='*', async_mode='eventlet')
 
 # JWT Error Handlers
 @jwt.expired_token_loader
@@ -151,6 +156,12 @@ if redis_client:
 # Register blueprints
 app.register_blueprint(auth_bp, url_prefix='/api/auth')
 app.register_blueprint(api_bp)  # Optimized API routes
+
+# Initialize worker service
+worker_service = WorkerService() if redis_client else None
+
+# Initialize real-time service
+realtime_service = init_realtime_service(socketio, redis_client) if redis_client else None
 
 # Configuration for API URL (can be ngrok or localhost)
 API_BASE_URL = os.environ.get('API_BASE_URL', 'http://localhost:5000')
@@ -729,7 +740,7 @@ def handle_join_admin(data):
     except Exception as e:
         emit('error', {'error': str(e)})
 
-def _emit_emotion_to_parents(student_id: int, emotion: str, detected_at_iso: str):
+def _emit_emotion_to_parents(student_id: int, emotion: str, detected_at_iso: str, confidence: float = 0.0, session_id: int = None):
     try:
         # Cari parent dari student
         parent_rows = db.session.query(StudentParent.parent_id).filter(StudentParent.student_id == student_id).all()
@@ -737,9 +748,24 @@ def _emit_emotion_to_parents(student_id: int, emotion: str, detected_at_iso: str
             socketio.emit('emotion_log_created', {
                 'student_id': student_id,
                 'emotion': emotion,
-                'detected_at': detected_at_iso
+                'detected_at': detected_at_iso,
+                'confidence': confidence,
+                'session_id': session_id
             }, to=f"orang_tua:{parent_id}")
-    except Exception:
+        
+        # Broadcast real-time update
+        if realtime_service:
+            realtime_service.broadcast_emotion_update(
+                str(student_id), emotion, confidence, session_id
+            )
+        
+        # Invalidate cache for this student's parents
+        if cache_service:
+            for (parent_id,) in parent_rows:
+                cache_service.invalidate_emotion_cache(str(student_id))
+                
+    except Exception as e:
+        app.logger.error(f"Error emitting emotion to parents: {e}")
         pass
 
 def _emit_emotion_aggregation_to_parents(student_id: int):
@@ -3018,59 +3044,59 @@ def get_parent_session_detail(session_id):
 @jwt_required()
 @require_role(['orang_tua'])
 def get_parent_sessions():
-    """API untuk mendapatkan daftar sesi anak dari perspektif orang tua"""
+    """API untuk mendapatkan daftar sesi anak dari perspektif orang tua - FIXED VERSION"""
     try:
         user_id = get_jwt_identity()
+        user_id = int(user_id) if user_id is not None else None
         
-        # Ambil semua anak dari orang tua ini
+        # Dapatkan semua anak milik parent
         children = db.session.query(Student).join(StudentParent).filter(
-            StudentParent.parent_id == user_id
+            StudentParent.parent_id == user_id,
+            Student.is_active == True
         ).all()
         
         if not children:
             return jsonify({'sessions': []}), 200
         
         child_ids = [child.id for child in children]
+        child_dict = {child.id: child for child in children}
         
-        # Ambil sesi yang melibatkan anak-anak ini
-        sessions = db.session.query(EmotionSession).join(EmotionLog).filter(
-            EmotionLog.student_id.in_(child_ids)
-        ).distinct().order_by(EmotionSession.start_time.desc()).limit(20).all()
+        # Ambil SEMUA sesi untuk semua anak (tidak hanya yang ada deteksi)
+        # Untuk API sessions, batasi ke 50 terbaru untuk performa
+        sessions = db.session.query(EmotionSession).filter(
+            EmotionSession.student_id.in_(child_ids)
+        ).order_by(EmotionSession.start_time.desc()).limit(50).all()
         
         sessions_data = []
         for session in sessions:
-            # Hitung deteksi per anak dalam sesi ini
-            child_detections = {}
-            child_emotions = {}
+            # Hitung deteksi untuk anak dalam sesi ini
+            child_id = session.student_id
+            child = child_dict.get(child_id)
             
-            for child_id in child_ids:
-                logs = db.session.query(EmotionLog).filter(
-                    EmotionLog.session_id == session.id,
-                    EmotionLog.student_id == child_id
-                ).all()
+            if not child:
+                continue
                 
-                if logs:
-                    child_detections[child_id] = len(logs)
-                    emotions = set(log.emotion for log in logs)
-                    child_emotions[child_id] = len(emotions)
+            # Hitung deteksi dan emosi untuk anak ini
+            logs = db.session.query(EmotionLog).filter(
+                EmotionLog.session_id == session.id,
+                EmotionLog.student_id == child_id
+            ).all()
             
-            # Ambil anak yang paling banyak deteksi dalam sesi ini
-            if child_detections:
-                main_child_id = max(child_detections.keys(), key=lambda k: child_detections[k])
-                main_child = next(child for child in children if child.id == main_child_id)
-                
-                sessions_data.append({
-                    'id': session.id,
-                    'session_name': session.session_name,
-                    'start_time': session.start_time.isoformat(),
-                    'end_time': session.end_time.isoformat() if session.end_time else None,
-                    'status': session.status,
-                    'child_id': main_child_id,
-                    'child_name': main_child.full_name,
-                    'teacher_name': session.teacher.full_name if session.teacher else 'Unknown',
-                    'total_detections': child_detections[main_child_id],
-                    'unique_emotions': child_emotions[main_child_id]
-                })
+            total_detections = len(logs)
+            unique_emotions = len(set(log.emotion for log in logs)) if logs else 0
+            
+            sessions_data.append({
+                'id': session.id,
+                'session_name': session.session_name,
+                'start_time': session.start_time.isoformat(),
+                'end_time': session.end_time.isoformat() if session.end_time else None,
+                'status': session.status,
+                'child_id': child_id,
+                'child_name': child.full_name,
+                'teacher_name': session.teacher.full_name if session.teacher else 'Unknown',
+                'total_detections': total_detections,
+                'unique_emotions': unique_emotions
+            })
         
         return jsonify({'sessions': sessions_data}), 200
         
@@ -3078,12 +3104,11 @@ def get_parent_sessions():
         app.logger.error(f"Error in get_parent_sessions: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
-# API Routes untuk Dashboard Orang Tua
 @app.route('/api/dashboard/parent/stats')
 @jwt_required()
 @require_role(['orang_tua'])
 def parent_dashboard_stats():
-    """API untuk statistik dashboard orang tua"""
+    """API untuk statistik dashboard orang tua dengan caching"""
     try:
         user_id = get_jwt_identity()
         
@@ -3095,6 +3120,11 @@ def parent_dashboard_stats():
             user_id = int(user_id)
         except (ValueError, TypeError):
             return jsonify(create_error_response('User ID tidak valid', 400))
+        
+        # Cek cache terlebih dahulu
+        cached_data = cache_service.get_parent_dashboard_data(str(user_id))
+        if cached_data:
+            return jsonify(cached_data)
         
         # Cek apakah user masih aktif
         user = User.query.get(user_id)
@@ -3178,15 +3208,32 @@ def parent_dashboard_stats():
         except Exception as e:
             dominant_emotion = 'Neutral'
         
-        return jsonify({
+        # Pastikan ada data emosi default jika kosong
+        if not emotion_dict:
+            emotion_dict = {
+                'happy': 0, 'sad': 0, 'angry': 0, 'fear': 0,
+                'surprise': 0, 'disgust': 0, 'neutral': 0
+            }
+        
+        # Prepare response data
+        response_data = {
             'success': True,
             'total_children': total_children,
             'weekly_sessions': weekly_sessions,
             'total_sessions': total_sessions,
             'avg_emotion': dominant_emotion,
             'positive_trend': round(positive_trend, 1),
-            'emotion_data': emotion_dict
-        }), 200
+            'emotion_data': emotion_dict,
+            'debug_info': {
+                'child_ids': child_ids if 'child_ids' in locals() else [],
+                'emotion_data_raw': emotion_dict
+            }
+        }
+        
+        # Cache the response data
+        cache_service.cache_parent_dashboard_data(str(user_id), response_data)
+        
+        return jsonify(response_data), 200
         
     except ValidationError as e:
         return jsonify(handle_validation_error(e))
@@ -3394,8 +3441,11 @@ def get_parent_children_summary():
                 
                 avg_score = 0
                 if emotion_logs:
-                    total_score = sum(log.confidence for log in emotion_logs)
-                    avg_score = total_score / len(emotion_logs)
+                    # Filter logs yang memiliki confidence_score
+                    valid_logs = [log for log in emotion_logs if log.confidence_score is not None]
+                    if valid_logs:
+                        total_score = sum(log.confidence_score for log in valid_logs)
+                        avg_score = total_score / len(valid_logs)
                 
                 # Hitung distribusi emosi
                 emotion_counts = {}
@@ -5360,8 +5410,267 @@ def create_backup():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+# Worker API endpoints
+@app.route('/api/worker/send-notification', methods=['POST'])
+@jwt_required()
+def send_notification():
+    """Send notification using worker"""
+    if not worker_service:
+        return jsonify({'status': 'error', 'message': 'Worker service not available'}), 500
+    
+    try:
+        data = request.get_json()
+        notification_type = data.get('type', 'email')
+        recipient = data.get('recipient')
+        subject = data.get('subject', 'EMONG Notification')
+        message = data.get('message', '')
+        extra_data = data.get('data', {})
+        
+        if not recipient:
+            return jsonify({'status': 'error', 'message': 'Recipient is required'}), 400
+        
+        message_id = worker_service.send_notification(
+            notification_type, recipient, subject, message, extra_data
+        )
+        
+        if message_id:
+            return jsonify({
+                'status': 'success',
+                'message': 'Notification queued',
+                'message_id': message_id
+            })
+        else:
+            return jsonify({'status': 'error', 'message': 'Failed to queue notification'}), 500
+            
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+@app.route('/api/worker/request-report', methods=['POST'])
+@jwt_required()
+def request_report():
+    """Request report generation using worker"""
+    if not worker_service:
+        return jsonify({'status': 'error', 'message': 'Worker service not available'}), 500
+    
+    try:
+        data = request.get_json()
+        report_type = data.get('type', 'emotion')
+        student_id = data.get('student_id')
+        start_date = data.get('start_date')
+        end_date = data.get('end_date')
+        format_type = data.get('format', 'pdf')
+        user_id = get_jwt_identity()
+        
+        message_id = worker_service.request_report(
+            report_type, student_id, start_date, end_date, format_type, user_id
+        )
+        
+        if message_id:
+            return jsonify({
+                'status': 'success',
+                'message': 'Report request queued',
+                'message_id': message_id
+            })
+        else:
+            return jsonify({'status': 'error', 'message': 'Failed to queue report request'}), 500
+            
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+@app.route('/api/worker/schedule-task', methods=['POST'])
+@jwt_required()
+def schedule_task():
+    """Schedule task using worker"""
+    if not worker_service:
+        return jsonify({'status': 'error', 'message': 'Worker service not available'}), 500
+    
+    try:
+        data = request.get_json()
+        task_type = data.get('task_type')
+        task_data = data.get('task_data', {})
+        delay_seconds = data.get('delay_seconds', 0)
+        
+        if not task_type:
+            return jsonify({'status': 'error', 'message': 'Task type is required'}), 400
+        
+        message_id = worker_service.schedule_task(task_type, task_data, delay_seconds)
+        
+        if message_id:
+            return jsonify({
+                'status': 'success',
+                'message': 'Task scheduled',
+                'message_id': message_id
+            })
+        else:
+            return jsonify({'status': 'error', 'message': 'Failed to schedule task'}), 500
+            
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+@app.route('/api/worker/job-status/<stream_name>/<message_id>')
+@jwt_required()
+def get_job_status(stream_name, message_id):
+    """Get job status"""
+    if not worker_service:
+        return jsonify({'status': 'error', 'message': 'Worker service not available'}), 500
+    
+    try:
+        status = worker_service.get_job_status(stream_name, message_id)
+        return jsonify({'status': 'success', 'job_status': status})
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+# Mental Health API endpoints
+@app.route('/mental-health/analysis/<int:student_id>')
+@jwt_required()
+@require_role(['orang_tua', 'guru', 'admin'])
+def mental_health_analysis(student_id):
+    """API untuk analisis kesehatan mental siswa"""
+    try:
+        user_id = get_jwt_identity()
+        user_id = int(user_id) if user_id is not None else None
+        
+        # Get days parameter
+        days = int(request.args.get('days', 7))
+        
+        # Authorization check
+        if not user_id:
+            return jsonify({'error': 'User ID tidak ditemukan'}), 401
+        
+        # Check if user has access to this student
+        user = User.query.get(user_id)
+        if not user:
+            return jsonify({'error': 'User tidak ditemukan'}), 404
+        
+        # For parents, check if student belongs to them
+        if user.role == 'orang_tua':
+            parent_relation = StudentParent.query.filter_by(
+                parent_id=user_id, 
+                student_id=student_id
+            ).first()
+            if not parent_relation:
+                return jsonify({'error': 'Anda tidak berhak mengakses data siswa ini'}), 403
+        
+        # For teachers, check if student is in their class
+        elif user.role == 'guru':
+            teacher_relation = StudentTeacher.query.filter_by(
+                teacher_id=user_id,
+                student_id=student_id
+            ).first()
+            if not teacher_relation:
+                return jsonify({'error': 'Anda tidak berhak mengakses data siswa ini'}), 403
+        
+        # Get mental health analysis
+        analysis = mental_health_service.analyze_mental_health_trends(student_id, days)
+        
+        return jsonify(analysis), 200
+        
+    except Exception as e:
+        app.logger.error(f"Mental health analysis error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/mental-health/progress/<int:student_id>')
+@jwt_required()
+@require_role(['orang_tua', 'guru', 'admin'])
+def mental_health_progress(student_id):
+    """API untuk progress tracking kesehatan mental"""
+    try:
+        user_id = get_jwt_identity()
+        user_id = int(user_id) if user_id is not None else None
+        
+        # Authorization check
+        if not user_id:
+            return jsonify({'error': 'User ID tidak ditemukan'}), 401
+        
+        # Check if user has access to this student
+        user = User.query.get(user_id)
+        if not user:
+            return jsonify({'error': 'User tidak ditemukan'}), 404
+        
+        # For parents, check if student belongs to them
+        if user.role == 'orang_tua':
+            parent_relation = StudentParent.query.filter_by(
+                parent_id=user_id, 
+                student_id=student_id
+            ).first()
+            if not parent_relation:
+                return jsonify({'error': 'Anda tidak berhak mengakses data siswa ini'}), 403
+        
+        # For teachers, check if student is in their class
+        elif user.role == 'guru':
+            teacher_relation = StudentTeacher.query.filter_by(
+                teacher_id=user_id,
+                student_id=student_id
+            ).first()
+            if not teacher_relation:
+                return jsonify({'error': 'Anda tidak berhak mengakses data siswa ini'}), 403
+        
+        # Get progress tracking
+        progress = mental_health_service.get_progress_tracking(student_id)
+        
+        return jsonify(progress), 200
+        
+    except Exception as e:
+        app.logger.error(f"Mental health progress error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/mental-health/recommendations/<int:student_id>')
+@jwt_required()
+@require_role(['orang_tua', 'guru', 'admin'])
+def mental_health_recommendations(student_id):
+    """API untuk rekomendasi kesehatan mental"""
+    try:
+        user_id = get_jwt_identity()
+        user_id = int(user_id) if user_id is not None else None
+        
+        # Get days parameter
+        days = int(request.args.get('days', 7))
+        
+        # Authorization check (same as analysis)
+        if not user_id:
+            return jsonify({'error': 'User ID tidak ditemukan'}), 401
+        
+        user = User.query.get(user_id)
+        if not user:
+            return jsonify({'error': 'User tidak ditemukan'}), 404
+        
+        # Check access permissions
+        if user.role == 'orang_tua':
+            parent_relation = StudentParent.query.filter_by(
+                parent_id=user_id, 
+                student_id=student_id
+            ).first()
+            if not parent_relation:
+                return jsonify({'error': 'Anda tidak berhak mengakses data siswa ini'}), 403
+        elif user.role == 'guru':
+            teacher_relation = StudentTeacher.query.filter_by(
+                teacher_id=user_id,
+                student_id=student_id
+            ).first()
+            if not teacher_relation:
+                return jsonify({'error': 'Anda tidak berhak mengakses data siswa ini'}), 403
+        
+        # Get analysis and extract recommendations
+        analysis = mental_health_service.analyze_mental_health_trends(student_id, days)
+        
+        if analysis.get('status') == 'success':
+            return jsonify({
+                'status': 'success',
+                'student_id': student_id,
+                'recommendations': analysis.get('recommendations', []),
+                'interventions': analysis.get('interventions', []),
+                'risk_level': analysis.get('risk_level', 'unknown'),
+                'last_updated': analysis.get('last_updated')
+            }), 200
+        else:
+            return jsonify(analysis), 200
+        
+    except Exception as e:
+        app.logger.error(f"Mental health recommendations error: {e}")
+        return jsonify({'error': str(e)}), 500
+
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
     port = int(os.environ.get('PORT', 5000))
-    socketio.run(app, host='0.0.0.0', port=port, debug=True)
+    socketio.run(app, host='0.0.0.0', port=port, debug=True, use_reloader=False)

@@ -1,5 +1,6 @@
 import os
 from typing import Any, Dict, List, Optional, Tuple
+from services.emotion_bias_correction import emotion_bias_correction
 
 import numpy as np
 
@@ -139,7 +140,7 @@ _DEFAULT_EMO_LABELS = [
 
 
 def predict_emotion(face_bgr: np.ndarray) -> Optional[Dict[str, Any]]:
-    """Predict emotion using ONNX model if available.
+    """Predict emotion using ONNX model with bias correction.
     Returns { 'emotion': str, 'scores': {label: prob}} or None on failure.
     """
     if _emotion_sess is None:
@@ -163,9 +164,25 @@ def predict_emotion(face_bgr: np.ndarray) -> Optional[Dict[str, Any]]:
         probs = exp / (np.sum(exp) + 1e-9)
         labels = _DEFAULT_EMO_LABELS[: len(probs)]
         scores = {lbl: float(probs[i]) for i, lbl in enumerate(labels)}
-        top_idx = int(np.argmax(probs))
-        top_label = labels[top_idx]
-        return {"emotion": top_label, "scores": scores}
+        
+        # Apply bias correction untuk mengatasi bias ke 'sad'
+        try:
+            corrected_result = emotion_bias_correction.correct_emotion_bias(
+                scores, 
+                context='classroom'
+            )
+            # Gunakan hasil yang sudah dikoreksi
+            return {
+                "emotion": corrected_result['emotion'], 
+                "scores": corrected_result['corrected_scores']
+            }
+        except Exception as e:
+            # Fallback ke hasil original jika bias correction gagal
+            print(f"⚠️  Bias correction failed: {e}")
+            top_idx = int(np.argmax(probs))
+            top_label = labels[top_idx]
+            return {"emotion": top_label, "scores": scores}
+            
     except Exception:
         return None
 

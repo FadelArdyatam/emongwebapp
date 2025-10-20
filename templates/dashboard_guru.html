@@ -3615,7 +3615,7 @@
                             <div class="card-body">
                                 <h6 class="card-title text-info"><i class="fas fa-crystal-ball me-2"></i>Prediksi Emosi</h6>
                                 <p class="mb-1"><strong>Prediksi:</strong> <span class="badge bg-primary">${prediction?.prediction || 'N/A'}</span></p>
-                                <p class="mb-1"><strong>Confidence:</strong> ${(prediction?.confidence * 100)?.toFixed(1) || 'N/A'}%</p>
+                                <p class="mb-1"><strong>Confidence:</strong> ${(prediction?.confidence_score * 100)?.toFixed(1) || 'N/A'}%</p>
                                 <p class="mb-0"><strong>Method:</strong> ${prediction?.method || 'N/A'}</p>
                             </div>
                         </div>
