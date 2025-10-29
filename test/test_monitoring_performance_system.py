@@ -1,3 +1,4 @@
+import redis
 import time
 import os
 import sys
@@ -6,17 +7,28 @@ import psutil
 import matplotlib.pyplot as plt
 from fpdf import FPDF
 from collections import defaultdict
+import pynvml
 import traceback
-try:
-    import redis
-    REDIS_ON = True
-except ImportError:
-    REDIS_ON = False
 
 ITER = 15
-MODEL_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '../models/convertedmodels/retinaface_resnet50.onnx'))
+REDIS_ON = True
 REDIS_HOST = 'localhost'
 REDIS_PORT = 6379
+MODEL_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '../models/convertedmodels/retinaface_resnet50.onnx'))
+
+# Fungsi redis stat
+redis_baseline = {'hits': 0, 'misses': 0}
+redis_stat_loop = {'hits': [], 'misses': []}
+def get_redis_stats():
+    try:
+        r = redis.StrictRedis(host=REDIS_HOST, port=REDIS_PORT)
+        info = r.info()
+        return { 'hits': info.get('keyspace_hits', 0), 'misses': info.get('keyspace_misses', 0) }
+    except Exception as e:
+        return {'error': str(e)}
+
+# Timer model load
+model_load_time = {'CPU': None, 'GPU': None}
 
 print("==========[DEBUG ENV]==========")
 try:
@@ -51,20 +63,25 @@ def run_benchmark(provider, iter=ITER):
         raise ValueError('Provider harus CPUExecutionProvider atau CUDAExecutionProvider')
     if not os.path.exists(MODEL_PATH):
         print(f'Model tidak ditemukan di: {MODEL_PATH}'); return None
+    # --- Model Load TIMER ---
+    t0 = time.time()
     try:
         print(f"[DEBUG] Membuat session onnxruntime dengan provider: {provider}")
         sess = ort.InferenceSession(MODEL_PATH, providers=[provider])
         print(f"[DEBUG] get_providers: {sess.get_providers()}")
     except Exception as e:
         print(f'Gagal load dengan {provider}: {e}')
-        print('> Full traceback:')
         traceback.print_exc()
         return None
+    t1 = time.time()
+    model_load_time[provider] = t1 - t0
+    
     input_name = sess.get_inputs()[0].name
     dummy_img = np.random.randint(0,255, (640,640,3), dtype=np.uint8)
-    all_time = []
-    all_cpu = []
-    all_mem = []
+    all_time, all_cpu, all_mem = [], [], []
+    # Redis hit/miss awal
+    if REDIS_ON:
+        s = get_redis_stats(); redis_baseline['hits'] = s['hits']; redis_baseline['misses'] = s['misses']
     for i in range(iter):
         p = psutil.Process(os.getpid())
         cpu1 = p.cpu_percent(interval=None)
@@ -83,6 +100,12 @@ def run_benchmark(provider, iter=ITER):
         all_cpu.append((cpu1+cpu2)/2)
         all_mem.append((mem1+mem2)/2)
         all_time.append(t)
+        # Redis stat per iterasi (sample tiap 3x)
+        if REDIS_ON and i % 3 == 0:
+            s = get_redis_stats(); redis_stat_loop['hits'].append(s['hits']); redis_stat_loop['misses'].append(s['misses'])
+    # Redis hit/miss setelah
+    if REDIS_ON:
+        s = get_redis_stats(); redis_baseline['hits_after'] = s['hits']; redis_baseline['misses_after'] = s['misses']
     return {
         'provider': provider,
         'inference_times': all_time,
@@ -218,24 +241,65 @@ else:
     pdf_note = 'Tidak ada provider valid yang tersedia/model load gagal.'
 
 # --- PDF ---
+# Benchmarking / PDF summary
+
+# Patch ringkasan redis & model load ke PDF
+def redis_summary_txt():
+    if not REDIS_ON or not redis_baseline:
+        return 'Redis monitoring tidak aktif atau tidak tersedia.'
+    s = redis_baseline
+    hits0, hits1 = s.get('hits',0), s.get('hits_after',0)
+    miss0, miss1 = s.get('misses',0), s.get('misses_after',0)
+    return f"Hit awal: {hits0}, setelah: {hits1}, Delta: {hits1-hits0}\nMiss awal: {miss0}, setelah: {miss1}, Delta: {miss1-miss0}"
+
+# Optional: render redis stat chart jika ada
+def render_redis_chart():
+    if REDIS_ON and len(redis_stat_loop['hits']) > 2:
+        x = list(range(len(redis_stat_loop['hits'])))
+        plt.figure(figsize=(6,3))
+        plt.plot(x, redis_stat_loop['hits'], '-ob', label='Hits')
+        plt.plot(x, redis_stat_loop['misses'], '-or', label='Misses')
+        plt.xlabel('Iterasi ke-index')
+        plt.ylabel('Count')
+        plt.title('Trend Redis Hit/Miss per Batch Inference')
+        plt.legend()
+        plt.tight_layout()
+        plt.savefig('redis_hit_miss_trend.png')
+        plt.close()
+        return 'redis_hit_miss_trend.png'
+    return None
+
+def model_load_summary_txt():
+    return f"Waktu load model CPU: {model_load_time['CPU']:.4f}s\nWaktu load model GPU: {model_load_time['GPU']:.4f}s"
+
+# Call redis chart render sebelum PDF
+redis_chart_file = render_redis_chart()
+
 pdf = FPDF()
 pdf.add_page()
 pdf.set_font('Arial', 'B', 14)
 pdf.cell(0,12, 'Benchmark CPU vs GPU EmongDeepFace', ln=1, align='C')
-pdf.ln(4)
-pdf.set_font('Arial', '', 12)
-pdf.multi_cell(0,8, f"Hasil benchmark aktual EmongDeepFaceWeb.\n---\nCatatan: {pdf_note}\n" )
 pdf.ln(2)
-# Ringkasan metrik
-def val(x):
-    return f"{x:.4f}" if isinstance(x,(float,np.floating)) else str(x)
-
-if data_cpu:
-    pdf.set_font('Arial', 'B', 12)
-    pdf.cell(0,9,'METRIK CPU:',ln=1)
+pdf.set_font('Arial', 'B', 12)
+pdf.cell(0, 9, 'Model Load Time', ln=1)
+pdf.set_font('Arial', '', 11)
+pdf.multi_cell(0, 7, model_load_summary_txt())
+pdf.ln(1)
+pdf.set_font('Arial', 'B', 12)
+pdf.cell(0, 9, 'Redis Cache Monitoring', ln=1)
+pdf.set_font('Arial', '', 11)
+pdf.multi_cell(0, 7, redis_summary_txt())
+pdf.ln(1)
+if redis_chart_file:
     pdf.set_font('Arial', '', 11)
-    pdf.multi_cell(0,7, f"Rata-rata waktu inferensi (CPU): {val(data_cpu['mean_time'])} detik\nThroughput FPS: {val(data_cpu['mean_fps'])}\nCPU Usage avg: {val(data_cpu['mean_cpu'])}\nRAM Usage avg: {val(data_cpu['mean_mem'])}")
-    pdf.ln(2)
+    pdf.cell(0, 9, 'Redis Hit/Miss per Iterasi:', ln=1)
+    pdf.image(redis_chart_file, w=160)
+pdf.ln(2)
+pdf.set_font('Arial', 'B', 12)
+pdf.cell(0,9,'METRIK CPU:',ln=1)
+pdf.set_font('Arial', '', 11)
+pdf.multi_cell(0,7, f"Rata-rata waktu inferensi (CPU): {val(data_cpu['mean_time'])} detik\nThroughput FPS: {val(data_cpu['mean_fps'])}\nCPU Usage avg: {val(data_cpu['mean_cpu'])}\nRAM Usage avg: {val(data_cpu['mean_mem'])}")
+pdf.ln(2)
 if data_gpu:
     pdf.set_font('Arial', 'B', 12)
     pdf.cell(0,9,'METRIK GPU:',ln=1)
