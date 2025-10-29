@@ -6,6 +6,7 @@ import psutil
 import matplotlib.pyplot as plt
 from fpdf import FPDF
 from collections import defaultdict
+import traceback
 try:
     import redis
     REDIS_ON = True
@@ -16,6 +17,27 @@ ITER = 15
 MODEL_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '../models/convertedmodels/retinaface_mobilenet25.onnx'))
 REDIS_HOST = 'localhost'
 REDIS_PORT = 6379
+
+print("==========[DEBUG ENV]==========")
+try:
+    import onnxruntime as ort
+    print("ONNXRuntime version:", ort.__version__)
+    print("Tersedia providers:", ort.get_available_providers())
+    print("ONNX device:", ort.get_device())
+except Exception as e:
+    print("[ONNXRUNTIME ERROR]", e)
+try:
+    import os
+    print("CUDA_VISIBLE_DEVICES:", os.environ.get("CUDA_VISIBLE_DEVICES"))
+    print("PATH:", os.environ.get("PATH"))
+    print("CUDA_PATH:", os.environ.get("CUDA_PATH"))
+    print("NVIDIA SMI Output:")
+    import subprocess
+    out = subprocess.check_output(["nvidia-smi"], encoding="utf8", stderr=subprocess.STDOUT)
+    print(out)
+except Exception as e:
+    print("[NVIDIA-SMI/CUDA ERROR]", e)
+print("===============================\n")
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from services import detector_retinaface_onnx as ret_onnx
@@ -30,9 +52,14 @@ def run_benchmark(provider, iter=ITER):
     if not os.path.exists(MODEL_PATH):
         print(f'Model tidak ditemukan di: {MODEL_PATH}'); return None
     try:
+        print(f"[DEBUG] Membuat session onnxruntime dengan provider: {provider}")
         sess = ort.InferenceSession(MODEL_PATH, providers=[provider])
+        print(f"[DEBUG] get_providers: {sess.get_providers()}")
     except Exception as e:
-        print(f'Gagal load dengan {provider}: {e}'); return None
+        print(f'Gagal load dengan {provider}: {e}')
+        print('> Full traceback:')
+        traceback.print_exc()
+        return None
     input_name = sess.get_inputs()[0].name
     dummy_img = np.random.randint(0,255, (640,640,3), dtype=np.uint8)
     all_time = []
@@ -44,7 +71,12 @@ def run_benchmark(provider, iter=ITER):
         mem1 = p.memory_info().rss / 1024 / 1024
         blob = ret_onnx._preprocess(dummy_img)
         start = time.time()
-        _ = sess.run(None, {input_name: blob})
+        try:
+            _ = sess.run(None, {input_name: blob})
+        except Exception as e:
+            print(f'[DEBUG] Gagal run inference {provider}: {e}')
+            traceback.print_exc()
+            return None
         t = time.time()-start
         cpu2 = p.cpu_percent(interval=None)
         mem2 = p.memory_info().rss / 1024 / 1024
