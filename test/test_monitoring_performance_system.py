@@ -14,7 +14,7 @@ except ImportError:
     REDIS_ON = False
 
 ITER = 15
-MODEL_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '../models/convertedmodels/retinaface_mobilenet25.onnx'))
+MODEL_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '../models/convertedmodels/retinaface_resnet50.onnx'))
 REDIS_HOST = 'localhost'
 REDIS_PORT = 6379
 
