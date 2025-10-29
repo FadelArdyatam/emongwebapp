@@ -3,6 +3,8 @@ from typing import Any, Dict, List, Optional
 
 import cv2
 import numpy as np
+import logging
+logger = logging.getLogger("retinaface_loader_debug")
 
 _retina_sess = None
 
@@ -54,19 +56,39 @@ def _preprocess(image_bgr: np.ndarray, size=(640, 640)):
     return img
 
 
+def get_models_dir():
+    # Cari root emongwebapp folder regardless current file location
+    import os
+    this_file = os.path.abspath(__file__)
+    root_eidx = this_file.lower().rfind('emongwebapp')
+    if root_eidx != -1:
+        root_dir = this_file[:root_eidx+len('emongwebapp')]
+        return os.path.join(root_dir, 'models', 'convertedmodels')
+    # fallback
+    return os.path.abspath(os.path.join(os.path.dirname(__file__), '../../models/convertedmodels'))
+
+
 def extract_faces_with_retinaface_onnx(image_bgr: np.ndarray) -> Optional[List[Dict[str, Any]]]:
     """Return list of DeepFace-like detections using RetinaFace ONNX if model exists.
     Each item: { 'face': np.ndarray(RGB, 0..1), 'facial_area': {'x','y','w','h'} }
     """
-    base_dir = os.path.dirname(os.path.dirname(__file__))
-    models_dir = os.path.join(base_dir, 'models', 'convertedmodels')
-    # prefer mobilenet (smaller), fallback to resnet50
+    import os
+    logger.warning('extract_faces_with_retinaface_onnx dipanggil!')
+    logger.warning('Current working directory: %s', os.getcwd())
+    try:
+        logger.warning('os.listdir(./models/convertedmodels): %s', os.listdir(os.path.join(os.getcwd(), 'models', 'convertedmodels')))
+    except Exception as e:
+        logger.warning('Tidak bisa listdir ./models/convertedmodels: %s', e)
+    models_dir = get_models_dir()
     mobilenet_path = os.path.join(models_dir, 'retinaface_mobilenet25.onnx')
     res50_path = os.path.join(models_dir, 'retinaface_resnet50.onnx')
+    logger.warning("[DEBUG] retinaface mobilenet25 onnx: %s (EXISTS: %s)", mobilenet_path, os.path.isfile(mobilenet_path))
+    logger.warning("[DEBUG] retinaface resnet50 onnx: %s (EXISTS: %s)", res50_path, os.path.isfile(res50_path))
     sess = _lazy_session(mobilenet_path)
     if sess is None:
         sess = _lazy_session(res50_path)
     if sess is None:
+        logger.warning("[ERROR] RetinaFace ONNX model NOT FOUND at any checked path!")
         return None
 
     input_name = sess.get_inputs()[0].name

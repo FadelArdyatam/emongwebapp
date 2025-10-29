@@ -1,7 +1,7 @@
 """
 Optimized API Routes dengan caching dan bulk operations
 """
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, send_file, make_response
 from datetime import datetime
 import os
 from flask_jwt_extended import jwt_required, get_jwt_identity
@@ -9,6 +9,13 @@ from services.database_service import DatabaseService
 from services.websocket_service import websocket_service
 from functools import wraps
 import logging
+import tempfile
+import cv2
+import numpy as np
+from services.detector_retinaface_onnx import extract_faces_with_retinaface_onnx
+from services.onnx_runtime_service import predict_emotion
+from services.mental_health_service import mental_health_service
+import json
 
 logger = logging.getLogger(__name__)
 
@@ -406,3 +413,89 @@ def restart_worker():
     except Exception as e:
         logger.error(f"Worker restart error: {e}")
         return jsonify({'error': str(e)}), 500
+
+@api_bp.route('/video/emotion-analyze', methods=['POST'])
+@jwt_required()
+@require_role(['guru', 'admin'])
+def video_emotion_analyze():
+    """
+    Endpoint upload video, proses analisa emosi dengan onnx per frame
+    Output: video hasil (bounding box+label emosi) & summary analisa timeline emosi serta rekap mental health
+    """
+    video = request.files.get('video')
+    if not video or video.filename == '':
+        return jsonify({'error': 'No video file uploaded'}), 400
+
+    # Simpan video temp
+    temp_in = tempfile.NamedTemporaryFile(delete=False, suffix='.mp4')
+    temp_out = tempfile.NamedTemporaryFile(delete=False, suffix='.mp4')
+    video.save(temp_in.name)
+
+    cap = cv2.VideoCapture(temp_in.name)
+    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+    fps = cap.get(cv2.CAP_PROP_FPS) or 24.0
+    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    writer = cv2.VideoWriter(temp_out.name, fourcc, fps, (width, height))
+
+    timeline = []
+    emostat = {}
+    if not os.path.exists(os.path.join(os.path.dirname(__file__), '../models/convertedmodels/retinaface_mobilenet25.onnx')):
+        logger.warning('Retinaface mobilenet25.onnx tidak ditemukan!')
+    if not os.path.exists(os.path.join(os.path.dirname(__file__), '../models/convertedmodels/emotion.onnx')):
+        logger.warning('Emotion onnx tidak ditemukan!')
+
+    try:
+        frame_idx = 0
+        while True:
+            ret, frame = cap.read()
+            if not ret:
+                break
+            result = []
+            # Deteksi wajah pakai retinaface onnx
+            faces = extract_faces_with_retinaface_onnx(frame)
+            face_info=parse_info = ''
+            if faces is None:
+                face_info = 'model onnx gagal load/frame corrupt?'
+                logger.warning(faces)
+                # Timeline akan tampilkan error ini di field 'info'
+            for det in faces or []:
+                x, y, w, h = det['facial_area'].values()
+                face_bgr = frame[y:y+h, x:x+w]
+                emo_result = predict_emotion(face_bgr)
+                emo = emo_result['emotion'] if emo_result else 'unknown'
+                scores = emo_result['scores'] if emo_result and 'scores' in emo_result else {}
+                # Overlay bounding box & label
+                color = (0,200,0) if emo=='happy' else (0,0,255) if emo in ['angry','sad'] else (0,180,255) if emo=='surprise' else (128,128,128)
+                cv2.rectangle(frame, (x,y), (x+w,y+h), color, 2)
+                label = f"{emo}"
+                cv2.putText(frame, label, (x, y-10), cv2.FONT_HERSHEY_SIMPLEX, 0.8, color, 2)
+                result.append({'box':[x,y,w,h],'emotion':emo,'scores':scores})
+                # Rekap statistik frame
+                if emo!='unknown':
+                    emostat[emo] = emostat.get(emo,0)+1
+            # Timeline frame (can be per-second, here per frame)
+            timeline.append({'frame':frame_idx,'emotions':result, 'faces_detected': 0 if faces is None else len(faces), 'info':face_info})
+            writer.write(frame)
+            frame_idx += 1
+    finally:
+        cap.release()
+        writer.release()
+
+    # Compose emosi statistik
+    total = sum(emostat.values()) or 1
+    distribusi = {k:round(v/total,3) for k,v in emostat.items()}
+
+    # Analisa mental health (ringkas, dari distribusi hasil video ini saja)
+    # Gunakan service minimal: pola emosi -> risk level -> saran singkat
+    mh_result = mental_health_service._determine_risk_level( (distribusi.get('happy',0) - distribusi.get('sad',0)) )
+
+    out_json = {'distribusi':distribusi, 'timeline':timeline[:30], 'risk_level':mh_result,'total_frames':frame_idx}
+    
+    # Kirim hasil file video & summary dalam header json (untuk demo; produksi sebaiknya dua endpoint)
+    resp = make_response(
+        send_file(
+            temp_out.name, mimetype='video/mp4', as_attachment=True, download_name='hasil_analisa.mp4')
+    )
+    resp.headers['X-Emo-Result'] = json.dumps(out_json)
+    return resp

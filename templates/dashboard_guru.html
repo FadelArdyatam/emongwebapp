@@ -1132,6 +1132,9 @@
                     <a class="nav-link" href="#profile" onclick="showSection('profile')">
                         <i class="fas fa-user"></i> Profil Saya
                     </a>
+                    <a class="nav-link" href="#video-upload" onclick="showSection('videoUpload')">
+                        <i class="fas fa-upload"></i> Upload Video (Analisa Emosi)
+                    </a>
                     <a class="nav-link" href="#" onclick="logout()">
                         <i class="fas fa-sign-out-alt"></i> Logout
                     </a>
@@ -1582,6 +1585,22 @@
                         </div>
                     </div>
                 </div>
+                <div id="videoUploadSection" class="section" style="display: none; margin-left:0; transition: margin-left 0.3s ease;">
+                    <div class="row justify-content-center">
+                        <div class="col-md-8">
+                            <div class="card mt-4">
+                                <div class="card-header"><h5>Upload Video untuk Analisa Emosi</h5></div>
+                                <div class="card-body">
+                                    <form id="videoUploadForm">
+                                        <input type="file" id="videoFile" name="video" accept="video/*" class="form-control" required>
+                                        <button type="submit" class="btn btn-primary mt-2">Upload & Analisa</button>
+                                    </form>
+                                    <div id="videoResult" class="mt-4"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -1741,7 +1760,8 @@
                 'detection': 'Deteksi Emosi Real-time',
                 'students': 'Manajemen Data Siswa',
                 'reports': 'Laporan & Analytics',
-                'profile': 'Profil Saya'
+                'profile': 'Profil Saya',
+                'videoUpload': 'Analisa Video (Upload)'
             };
             document.getElementById('pageTitle').textContent = titles[section];
             
@@ -3846,6 +3866,60 @@
             }, 15000);
         });
     </script>
+    <script>
+        // Tambahan: upload video emosi
+        function setVideoUploadSectionMargin() {
+          var section = document.getElementById('videoUploadSection');
+          var sidebar = document.querySelector('.sidebar');
+          if (!section) return;
+          if (window.innerWidth > 768 && sidebar && sidebar.classList.contains('show')) {
+            section.style.marginLeft = '280px';
+            section.style.width = 'calc(100% - 280px)';
+          } else {
+            section.style.marginLeft = '0';
+            section.style.width = '';
+          }
+        }
+        window.addEventListener('resize', setVideoUploadSectionMargin);
+        document.addEventListener('DOMContentLoaded', setVideoUploadSectionMargin);
+        // Tambahan ke showSection
+        var _oldShowSection = showSection;
+        showSection = function(section) {
+          _oldShowSection.apply(this, arguments);
+          setVideoUploadSectionMargin();
+          if(section==='videoUpload') {
+            document.getElementById('videoUploadSection').style.display = '';
+            document.getElementById('pageTitle').textContent = 'Analisa Video (Upload)';
+          }
+        }
+        // Logic upload
+        const videoForm = document.getElementById('videoUploadForm');
+        if (videoForm) {
+          videoForm.onsubmit = async function(e) {
+            e.preventDefault();
+            const videoFile = document.getElementById('videoFile').files[0];
+            const formData = new FormData();
+            formData.append('video', videoFile);
+            document.getElementById('videoResult').innerHTML = 'Proses analisa...';
+            const accessToken = localStorage.getItem('access_token');
+            const res = await fetch('/api/v2/video/emotion-analyze', {
+              method: 'POST',
+              body: formData,
+              headers: {
+                'Authorization': 'Bearer ' + accessToken
+              }
+            });
+            if (res.ok) {
+              const blob = await res.blob();
+              const url = window.URL.createObjectURL(blob);
+              document.getElementById('videoResult').innerHTML =
+                'Hasil: <a href="'+url+'" download="hasil_analisa.mp4">Download Video Hasil</a><br><video controls src="'+url+'" width="400"></video>';
+            } else {
+              const t = await res.text();
+              document.getElementById('videoResult').innerHTML = 'Gagal: ' + t;
+            }
+          }
+        }
+    </script>
 </body>
-</html>
 </html>
