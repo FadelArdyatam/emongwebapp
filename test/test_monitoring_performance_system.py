@@ -81,7 +81,12 @@ def run_benchmark(provider, iter=ITER):
     all_time, all_cpu, all_mem = [], [], []
     # Redis hit/miss awal
     if REDIS_ON:
-        s = get_redis_stats(); redis_baseline['hits'] = s['hits']; redis_baseline['misses'] = s['misses']
+        s = get_redis_stats()
+        if 'error' not in s:
+            redis_baseline['hits'] = s['hits']
+            redis_baseline['misses'] = s['misses']
+        else:
+            redis_baseline['error'] = s['error']
     for i in range(iter):
         p = psutil.Process(os.getpid())
         cpu1 = p.cpu_percent(interval=None)
@@ -102,10 +107,18 @@ def run_benchmark(provider, iter=ITER):
         all_time.append(t)
         # Redis stat per iterasi (sample tiap 3x)
         if REDIS_ON and i % 3 == 0:
-            s = get_redis_stats(); redis_stat_loop['hits'].append(s['hits']); redis_stat_loop['misses'].append(s['misses'])
+            s = get_redis_stats()
+            if 'error' not in s:
+                redis_stat_loop['hits'].append(s['hits'])
+                redis_stat_loop['misses'].append(s['misses'])
     # Redis hit/miss setelah
     if REDIS_ON:
-        s = get_redis_stats(); redis_baseline['hits_after'] = s['hits']; redis_baseline['misses_after'] = s['misses']
+        s = get_redis_stats()
+        if 'error' not in s:
+            redis_baseline['hits_after'] = s['hits']
+            redis_baseline['misses_after'] = s['misses']
+        else:
+            redis_baseline['error'] = s['error']
     return {
         'provider': provider,
         'inference_times': all_time,
@@ -247,6 +260,8 @@ else:
 def redis_summary_txt():
     if not REDIS_ON or not redis_baseline:
         return 'Redis monitoring tidak aktif atau tidak tersedia.'
+    if 'error' in redis_baseline:
+        return f"Redis error: {redis_baseline['error']}"
     s = redis_baseline
     hits0, hits1 = s.get('hits',0), s.get('hits_after',0)
     miss0, miss1 = s.get('misses',0), s.get('misses_after',0)
