@@ -253,6 +253,12 @@ elif (not data_cpu) and data_gpu:
 else:
     pdf_note = 'Tidak ada provider valid yang tersedia/model load gagal.'
 
+def val(x):
+    try:
+        return f"{x:.4f}" if isinstance(x, (float, np.floating)) else str(x)
+    except Exception:
+        return str(x)
+
 # --- PDF ---
 # Benchmarking / PDF summary
 
