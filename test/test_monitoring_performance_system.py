@@ -285,7 +285,11 @@ def render_redis_chart():
     return None
 
 def model_load_summary_txt():
-    return f"Waktu load model CPU: {model_load_time['CPU']:.4f}s\nWaktu load model GPU: {model_load_time['GPU']:.4f}s"
+    cpu = model_load_time.get('CPU')
+    gpu = model_load_time.get('GPU')
+    cpu_str = f"{cpu:.4f}s" if cpu is not None else "n/a"
+    gpu_str = f"{gpu:.4f}s" if gpu is not None else "n/a"
+    return f"Waktu load model CPU: {cpu_str}\nWaktu load model GPU: {gpu_str}"
 
 # Call redis chart render sebelum PDF
 redis_chart_file = render_redis_chart()
